@@ -1,0 +1,24 @@
+name: on_error_continue_demo
+version: 1.0.0
+config-version: 2
+
+profile: dbt_practice
+
+model-paths: ["models"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
+packages-install-path: "vendor_packages"
+
+
+clean-targets:
+  - target
+  - dbt_packages
+  - logs
+
+dbt-cloud:
+  project-id: 70506183167677
+  account_id: 70506183163940
+
+vars:
+  on_error_continue_demo_strict_validation: false
+  on_error_continue_demo_exception_mode: safe

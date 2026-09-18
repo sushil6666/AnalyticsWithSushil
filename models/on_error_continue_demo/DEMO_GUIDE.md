@@ -715,7 +715,6 @@ Warning history is available through:
 - dbt Platform job run history
 - `run_results.json`
 - the persisted `PAYMENT_EVENTS_REQUIRING_REVIEW` table
-- Elementary artifacts collected by the project's run hooks
 
 For an incident, start with the persisted table to identify affected event IDs,
 then use the job run to review the warning count and execution context.
