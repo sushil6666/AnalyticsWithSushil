@@ -1,0 +1,15 @@
+extends: default
+
+ignore: |
+  target/
+  dbt_packages/
+  dbt_internal_packages/
+  vendor_packages/
+  logs/
+
+rules:
+  line-length: disable
+  document-start: disable
+  truthy:
+    allowed-values: ["true", "false"]
+  comments-indentation: disable

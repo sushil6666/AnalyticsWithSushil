@@ -129,13 +129,70 @@ through strict validation failures, Jinja warning/error modes, and the Slack/ema
 ## 🤝 Contributing
 
 Contributions, ideas, and improvements are welcome, especially new demos that showcase analytics engineering
-patterns worth sharing.
+patterns worth sharing. `main` is protected: nothing lands there without a pull request, a passing CI run, and an
+approving review, so open changes safely rather than pushing straight to it.
 
-1. Fork the repository
-2. Create a feature branch (`feat/your-demo-name`)
-3. Commit your changes
-4. Push your branch
-5. Open a pull request
+**Workflow:**
+
+1. Fork the repository (or branch directly if you have write access)
+2. Create a feature branch off `main`, named `feat/`, `fix/`, `refactor/`, `docs/`, `test/`, or `chore/` followed by
+   a short, specific slug, for example `feat/customer-ltv-demo`
+3. Commit your changes using [Conventional Commits](https://www.conventionalcommits.org/) (`feat:`, `fix:`, `docs:`,
+   and so on); the PR title is checked against the same convention
+4. Run `dbt build` locally against your own dev schema before opening a PR
+5. Push your branch and open a pull request against `main` using the PR template; fill in the validation section
+   with real `dbt build`/`dbt test` output, not a placeholder
+6. Address CI failures and reviewer feedback; once required checks pass and a code owner approves, the PR can merge
+
+**What gates a merge:**
+
+- **Required status checks** (see [`.github/workflows/ci.yml`](.github/workflows/ci.yml)): YAML lint, SQL lint
+  (`sqlfluff`, config in [`.sqlfluff`](.sqlfluff)), a conventional PR title check, and `dbt parse` to catch
+  structural and syntax errors before anything touches the warehouse.
+- **A dbt Platform CI job** (configured separately in dbt Cloud, not in this repo) that runs `dbt build`/`dbt test`
+  against a real, ephemeral Snowflake schema deferred to production state, the authoritative check that the change
+  actually works against live data.
+- **Code owner review**: [`.github/CODEOWNERS`](.github/CODEOWNERS) requires an approval from a maintainer on every
+  PR, and branch protection is configured to dismiss stale approvals when new commits are pushed.
+- **No direct pushes to `main`** and no force-pushes; history stays linear and reviewable.
+
+Merging to `main` triggers [`.github/workflows/cd.yml`](.github/workflows/cd.yml), which kicks off the production
+dbt Platform job so deployment is automatic once a PR is approved and merged, not a manual follow-up step.
+
+> **Repo admin setup note:** GitHub branch protection rules, repository secrets, and the dbt Cloud CI job trigger
+> are account/repo-settings changes that have to be made once by hand; see the checklist below.
+
+<details>
+<summary><strong>One-time repo admin checklist</strong> (click to expand)</summary>
+
+In **GitHub → Settings → Branches → Branch protection rules** for `main`:
+
+- Require a pull request before merging; require at least 1 approval; require review from Code Owners
+- Dismiss stale pull request approvals when new commits are pushed
+- Require status checks to pass before merging, and select: `lint-yaml`, `lint-sql`, `dbt-parse`, `pr-title`,
+  `required-checks` (add the dbt Platform CI job's check too, once step 2 below is done)
+- Require branches to be up to date before merging
+- Require linear history
+- Do not allow force pushes; do not allow deletions
+- Include administrators (so the rule applies to everyone, no exceptions)
+
+In **dbt Platform → Deploy → Jobs**, create a dedicated **CI job type** on this project's environment:
+
+- Trigger: "Run on Pull Requests" (uses the existing GitHub connection; posts a check back to the PR automatically)
+- Enable deferral to the production environment so CI runs build only what changed
+- Keep this separate from the scheduled `alert_test` job; delivery and CI validation should not share a job
+
+In **GitHub → Settings → Secrets and variables → Actions**, add:
+
+- `DBT_CLOUD_API_TOKEN`: a dbt Cloud service token with Job Admin access, used only by
+  [`cd.yml`](.github/workflows/cd.yml) to trigger the production run on merge
+
+No Snowflake credentials are ever needed in GitHub: `ci.yml`'s `dbt parse` step uses placeholder values because
+parsing never opens a warehouse connection, and the real build/test runs inside dbt Platform, which already holds
+the production credentials securely.
+
+</details>
+
 
 ## 👋 About me
 

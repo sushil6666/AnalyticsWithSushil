@@ -1,0 +1,30 @@
+name: CD
+
+# Runs only after a change lands on main (i.e. after PR review + CI have
+# already passed). Triggers the existing dbt Platform job so the real build
+# runs against Snowflake with credentials that live in dbt Cloud, never here.
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: cd-${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  trigger-dbt-platform-job:
+    name: Trigger dbt Platform job
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger job run via dbt Cloud Admin API
+        env:
+          DBT_CLOUD_API_TOKEN: ${{ secrets.DBT_CLOUD_API_TOKEN }}
+          DBT_CLOUD_ACCOUNT_ID: "70506183163940"
+          DBT_CLOUD_JOB_ID: "70506183139918"
+        run: |
+          curl --fail-with-body -sS \
+            --request POST \
+            --url "https://cloud.getdbt.com/api/v2/accounts/${DBT_CLOUD_ACCOUNT_ID}/jobs/${DBT_CLOUD_JOB_ID}/run/" \
+            --header "Authorization: Token ${DBT_CLOUD_API_TOKEN}" \
+            --header "Content-Type: application/json" \
+            --data "{\"cause\": \"Triggered by GitHub Actions for commit ${GITHUB_SHA}\"}"
