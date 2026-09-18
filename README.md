@@ -15,19 +15,17 @@
 
 # AnalyticsWithSushil
 
-Welcome to `AnalyticsWithSushil` — a repository focused on exploring data, building insights, and turning raw information into meaningful stories.
+Welcome to `AnalyticsWithSushil` : a repository focused on exploring data, building insights, and turning raw information into meaningful stories.
 
 ## ✨ About this project
 
 This project is a space for:
 
 - analytics experiments
-- data exploration and visualization
-- dashboard-building ideas
-- business intelligence workflows
+- dbt/ snowflake demos 
 - learning and sharing data-driven insights
 
-Whether you're here to learn, iterate, or build something impactful, this repository is designed to be a clean and inspiring starting point.
+Whether you're here to learn, iterate or build something impactful, this repository is designed to be a clean and inspiring starting point.
 
 ## 🌟 Highlights
 
@@ -69,10 +67,8 @@ This project is designed to remain flexible and can grow with tools like:
 
 - Python
 - SQL
-- Jupyter Notebooks
-- Power BI / Tableau / Looker
-- Excel / CSV-based workflows
-- Visualization libraries
+- Snowflake
+- dbt(data build tool)
 
 ## 🤝 Contributing
 
@@ -86,7 +82,9 @@ Contributions, ideas, and improvements are welcome.
 
 ## 📬 Connect
 
-- GitHub: [sushil6666](https://github.com/sushil6666)
+- Email: analyticswithsushil@gmail.com
+- Website: https://www.analyticswithsushil.com
+- Linkedin: https://www.linkedin.com/in/sushil-behera/
 - Repository: [AnalyticsWithSushil](https://github.com/sushil6666/AnalyticsWithSushil)
 
 <p align="center">
