@@ -142,75 +142,54 @@ approving review, so open changes safely rather than pushing straight to it.
 4. Run `dbt build` locally against your own dev schema before opening a PR
 5. Push your branch and open a pull request against `main` using the PR template; fill in the validation section
    with real `dbt build`/`dbt test` output, not a placeholder
-6. For a forked PR, static checks run without secrets. A maintainer must review the code and recreate the approved
-   commits on a trusted branch in this repository before warehouse-backed CI can run
-7. Address CI failures and reviewer feedback; once required checks pass and a code owner approves, the PR can merge
-
+6. Address CI failures and reviewer feedback; once required checks pass and a code owner approves, the PR can merge
 
 **What gates a merge:**
 
 - **Required status checks** (see [`.github/workflows/ci.yml`](.github/workflows/ci.yml)): YAML lint, SQL lint
-  (`sqlfluff`, config in [`.sqlfluff`](.sqlfluff)), a conventional PR title check, and a dbt Platform build using
-  the project's dbt v2 Stable engine against Snowflake.
+  (`sqlfluff`, configured in [`.sqlfluff`](.sqlfluff)), a conventional PR title check, and a required-checks summary.
+  These checks use no repository or warehouse secrets, so they run safely for both repository branches and forks.
+- **Code owner review**: [`.github/CODEOWNERS`](.github/CODEOWNERS) requires maintainer review on every PR, and branch
+  protection dismisses stale approvals when new commits are pushed.
+- **Protected history**: direct pushes, force pushes, branch deletion, unresolved review conversations, and merge
+  commits are blocked on `main`.
 
-- **A dbt Platform CI job** (`CI - pull request checks`, configured in dbt Cloud, not in this repo) that runs
-  `dbt build --select state:modified+` against a real, ephemeral Snowflake schema deferred to `stg_env`. This
-  account's plan doesn't expose dbt Platform's native "Triggered by pull requests" webhook, so the
-  `dbt-platform-ci` job in [`ci.yml`](.github/workflows/ci.yml) triggers it via the Admin API instead and polls
-  until it finishes, surfacing the result as a normal GitHub status check. The `Trusted branch policy` check blocks
-  forked PRs before secrets or warehouse execution are exposed.
+Warehouse deployment remains in dbt Platform, where Snowflake credentials and execution permissions are managed
+centrally. The existing deployment job should be run from dbt Platform after an approved merge, or by its configured
+schedule. GitHub Actions does not hold dbt Platform or Snowflake credentials in this repository.
 
-- **Code owner review**: [`.github/CODEOWNERS`](.github/CODEOWNERS) requires an approval from a maintainer on every
-  PR, and branch protection is configured to dismiss stale approvals when new commits are pushed.
-- **No direct pushes to `main`** and no force-pushes; history stays linear and reviewable.
-
-Merging to `main` triggers [`.github/workflows/cd.yml`](.github/workflows/cd.yml), which kicks off the production
-dbt Platform job so deployment is automatic once a PR is approved and merged, not a manual follow-up step.
-
-> **Repo admin setup note:** GitHub branch protection rules and repository secrets are account/repo-settings
-> changes that have to be made once by hand; see the checklist below.
+> **Repo admin setup note:** GitHub branch protection is configured once in repository settings. Keep the required
+> checks aligned with the workflow names below.
 
 <details>
 <summary><strong>One-time repo admin checklist</strong> (click to expand)</summary>
 
 In **GitHub → Settings → Branches → Branch protection rules** (or Rulesets) for `main`:
 
-- Require a pull request before merging; require at least 1 approval; require review from Code Owners
+- Require a pull request before merging
+- Require at least 1 approval and review from Code Owners
 - Dismiss stale pull request approvals when new commits are pushed
-- Require status checks to pass before merging, and select the displayed check names: `Lint YAML`,
-  `Lint SQL (sqlfluff)`, `Conventional PR title`, `Trusted branch policy`,
-  `dbt Platform CI (build + test)`, and `Required checks summary` (these only appear in the picker after
-  `ci.yml` has run at least once)
-
-
+- Require conversation resolution before merging
+- Require status checks to pass before merging, and select the displayed check names:
+  `Conventional PR title`, `Lint YAML`, `Lint SQL (sqlfluff)`, and `Required checks summary`
+- Remove obsolete required checks named `Trusted branch policy`, `dbt Platform CI (build + test)`, or
+  `dbt parse (structure & syntax check)` if they are still configured
 - Require branches to be up to date before merging
 - Require linear history
-- Do not allow force pushes; do not allow deletions
-- Apply the rule to administrators too, no bypass (otherwise it's decorative)
+- Do not allow force pushes or deletions
+- Apply the rule to administrators too, with no bypass
 
-In **dbt Platform → Deploy → Jobs**, the `CI - pull request checks` job should have:
+In **dbt Platform → Deploy → Jobs**:
 
-- Job type `ci`, in the `stg_env` environment
-- `dbt build --select state:modified+` as its command
-- Deferral enabled against `stg_env` (required for `state:modified+` to resolve at all)
-- Run timeout set explicitly (e.g. `1800` seconds); don't leave it at the 24-hour default
-- Native "Triggered by pull requests" left off (unavailable on this plan); `ci.yml` calls it via API instead
+- Keep warehouse execution inside dbt Platform
+- Run the deployment job after approved merges, or use its configured schedule
+- Keep the monitoring job separate from delivery so warning promotion does not block normal delivery
 
-In **GitHub → Settings → Secrets and variables → Actions**, add:
-
-- `DBT_CLOUD_API_TOKEN`: an account-scoped dbt Platform personal access token created under
-  **Account Settings → API tokens → Personal tokens** for account `70506183163940`. The workflows send it with
-  the documented `Bearer` authorization scheme. It is used by both [`cd.yml`](.github/workflows/cd.yml) (trigger
-  the production run on merge) and the `dbt-platform-ci` job in [`ci.yml`](.github/workflows/ci.yml) (trigger and
-  poll the CI job per PR). Do not use a GitHub PAT or a Semantic Layer-only dbt service token.
-
-No Snowflake credentials are needed in GitHub. Static linting runs without warehouse access, and the real parse,
-build, and test run executes inside dbt Platform using the project's dbt v2 Stable engine and centrally managed
-Snowflake credentials.
-
-
+No API token is required in GitHub for this workflow. You can delete the unused `DBT_CLOUD_API_TOKEN` repository
+secret after this change is merged.
 
 </details>
+
 
 
 
