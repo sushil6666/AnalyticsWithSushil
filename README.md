@@ -149,9 +149,12 @@ approving review, so open changes safely rather than pushing straight to it.
 - **Required status checks** (see [`.github/workflows/ci.yml`](.github/workflows/ci.yml)): YAML lint, SQL lint
   (`sqlfluff`, config in [`.sqlfluff`](.sqlfluff)), a conventional PR title check, and `dbt parse` to catch
   structural and syntax errors before anything touches the warehouse.
-- **A dbt Platform CI job** (configured separately in dbt Cloud, not in this repo) that runs `dbt build`/`dbt test`
-  against a real, ephemeral Snowflake schema deferred to production state, the authoritative check that the change
-  actually works against live data.
+- **A dbt Platform CI job** (`CI - pull request checks`, configured in dbt Cloud, not in this repo) that runs
+  `dbt build --select state:modified+` against a real, ephemeral Snowflake schema deferred to `stg_env`. This
+  account's plan doesn't expose dbt Platform's native "Triggered by pull requests" webhook, so the
+  `dbt-platform-ci` job in [`ci.yml`](.github/workflows/ci.yml) triggers it via the Admin API instead and polls
+  until it finishes, surfacing the result as a normal GitHub status check. Functionally the same gate, wired
+  through Actions rather than a native webhook.
 - **Code owner review**: [`.github/CODEOWNERS`](.github/CODEOWNERS) requires an approval from a maintainer on every
   PR, and branch protection is configured to dismiss stale approvals when new commits are pushed.
 - **No direct pushes to `main`** and no force-pushes; history stays linear and reviewable.
@@ -159,39 +162,43 @@ approving review, so open changes safely rather than pushing straight to it.
 Merging to `main` triggers [`.github/workflows/cd.yml`](.github/workflows/cd.yml), which kicks off the production
 dbt Platform job so deployment is automatic once a PR is approved and merged, not a manual follow-up step.
 
-> **Repo admin setup note:** GitHub branch protection rules, repository secrets, and the dbt Cloud CI job trigger
-> are account/repo-settings changes that have to be made once by hand; see the checklist below.
+> **Repo admin setup note:** GitHub branch protection rules and repository secrets are account/repo-settings
+> changes that have to be made once by hand; see the checklist below.
 
 <details>
 <summary><strong>One-time repo admin checklist</strong> (click to expand)</summary>
 
-In **GitHub → Settings → Branches → Branch protection rules** for `main`:
+In **GitHub → Settings → Branches → Branch protection rules** (or Rulesets) for `main`:
 
 - Require a pull request before merging; require at least 1 approval; require review from Code Owners
 - Dismiss stale pull request approvals when new commits are pushed
 - Require status checks to pass before merging, and select: `lint-yaml`, `lint-sql`, `dbt-parse`, `pr-title`,
-  `required-checks` (add the dbt Platform CI job's check too, once step 2 below is done)
+  `dbt-platform-ci`, `required-checks` (these only appear in the picker after `ci.yml` has run at least once)
 - Require branches to be up to date before merging
 - Require linear history
 - Do not allow force pushes; do not allow deletions
-- Include administrators (so the rule applies to everyone, no exceptions)
+- Apply the rule to administrators too, no bypass (otherwise it's decorative)
 
-In **dbt Platform → Deploy → Jobs**, create a dedicated **CI job type** on this project's environment:
+In **dbt Platform → Deploy → Jobs**, the `CI - pull request checks` job should have:
 
-- Trigger: "Run on Pull Requests" (uses the existing GitHub connection; posts a check back to the PR automatically)
-- Enable deferral to the production environment so CI runs build only what changed
-- Keep this separate from the scheduled `alert_test` job; delivery and CI validation should not share a job
+- Job type `ci`, in the `stg_env` environment
+- `dbt build --select state:modified+` as its command
+- Deferral enabled against `stg_env` (required for `state:modified+` to resolve at all)
+- Run timeout set explicitly (e.g. `1800` seconds); don't leave it at the 24-hour default
+- Native "Triggered by pull requests" left off (unavailable on this plan); `ci.yml` calls it via API instead
 
 In **GitHub → Settings → Secrets and variables → Actions**, add:
 
-- `DBT_CLOUD_API_TOKEN`: a dbt Cloud service token with Job Admin access, used only by
-  [`cd.yml`](.github/workflows/cd.yml) to trigger the production run on merge
+- `DBT_CLOUD_API_TOKEN`: a dbt Cloud service token with Job Admin access, used by both
+  [`cd.yml`](.github/workflows/cd.yml) (trigger the production run on merge) and the `dbt-platform-ci` job in
+  [`ci.yml`](.github/workflows/ci.yml) (trigger + poll the CI job per PR)
 
 No Snowflake credentials are ever needed in GitHub: `ci.yml`'s `dbt parse` step uses placeholder values because
 parsing never opens a warehouse connection, and the real build/test runs inside dbt Platform, which already holds
 the production credentials securely.
 
 </details>
+
 
 
 ## 👋 About me
