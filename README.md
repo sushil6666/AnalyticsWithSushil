@@ -198,13 +198,16 @@ In **dbt Platform → Deploy → Jobs**, the `CI - pull request checks` job shou
 
 In **GitHub → Settings → Secrets and variables → Actions**, add:
 
-- `DBT_CLOUD_API_TOKEN`: a dbt Cloud service token with Job Admin access, used by both
-  [`cd.yml`](.github/workflows/cd.yml) (trigger the production run on merge) and the `dbt-platform-ci` job in
-  [`ci.yml`](.github/workflows/ci.yml) (trigger + poll the CI job per PR)
+- `DBT_CLOUD_API_TOKEN`: an account-scoped dbt Platform personal access token created under
+  **Account Settings → API tokens → Personal tokens** for account `70506183163940`. The workflows send it with
+  the documented `Bearer` authorization scheme. It is used by both [`cd.yml`](.github/workflows/cd.yml) (trigger
+  the production run on merge) and the `dbt-platform-ci` job in [`ci.yml`](.github/workflows/ci.yml) (trigger and
+  poll the CI job per PR). Do not use a GitHub PAT or a Semantic Layer-only dbt service token.
 
 No Snowflake credentials are needed in GitHub. Static linting runs without warehouse access, and the real parse,
 build, and test run executes inside dbt Platform using the project's dbt v2 Stable engine and centrally managed
 Snowflake credentials.
+
 
 
 </details>

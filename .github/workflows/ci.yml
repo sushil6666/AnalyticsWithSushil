@@ -97,7 +97,7 @@ jobs:
 
           job_url="https://cloud.getdbt.com/api/v2/accounts/${DBT_CLOUD_ACCOUNT_ID}/jobs/${DBT_CLOUD_CI_JOB_ID}/"
           curl --fail-with-body -sS \
-            --header "Authorization: Token ${DBT_CLOUD_API_TOKEN}" \
+            --header "Authorization: Bearer ${DBT_CLOUD_API_TOKEN}" \
             "${job_url}" >/dev/null
 
           echo "dbt Platform authentication and CI job access verified."
@@ -109,7 +109,7 @@ jobs:
           trigger_url="https://cloud.getdbt.com/api/v2/accounts/${DBT_CLOUD_ACCOUNT_ID}/jobs/${DBT_CLOUD_CI_JOB_ID}/run/"
           run_id=$(curl --fail-with-body -sS \
             --request POST "${trigger_url}" \
-            --header "Authorization: Token ${DBT_CLOUD_API_TOKEN}" \
+            --header "Authorization: Bearer ${DBT_CLOUD_API_TOKEN}" \
             --header "Content-Type: application/json" \
             --data "{\"cause\": \"GitHub Actions PR #${PR_NUMBER}\", \"git_sha\": \"${PR_SHA}\"}" \
             | jq -r '.data.id')
@@ -125,9 +125,10 @@ jobs:
           # independent timeout and should finish before this loop expires.
           for _ in $(seq 1 80); do
             response=$(curl --fail-with-body -sS \
-              --header "Authorization: Token ${DBT_CLOUD_API_TOKEN}" \
+              --header "Authorization: Bearer ${DBT_CLOUD_API_TOKEN}" \
               "${status_url}")
             status=$(echo "${response}" | jq -r '.data.status')
+
             status_humanized=$(echo "${response}" | jq -r '.data.status_humanized')
             echo "Run ${run_id} status: ${status_humanized}"
 

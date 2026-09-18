@@ -25,6 +25,6 @@ jobs:
           curl --fail-with-body -sS \
             --request POST \
             --url "https://cloud.getdbt.com/api/v2/accounts/${DBT_CLOUD_ACCOUNT_ID}/jobs/${DBT_CLOUD_JOB_ID}/run/" \
-            --header "Authorization: Token ${DBT_CLOUD_API_TOKEN}" \
+            --header "Authorization: Bearer ${DBT_CLOUD_API_TOKEN}" \
             --header "Content-Type: application/json" \
             --data "{\"cause\": \"Triggered by GitHub Actions for commit ${GITHUB_SHA}\"}"
