@@ -128,69 +128,18 @@ through strict validation failures, Jinja warning/error modes, and the Slack/ema
 
 ## 🤝 Contributing
 
-Contributions, ideas, and improvements are welcome, especially new demos that showcase analytics engineering
-patterns worth sharing. `main` is protected: nothing lands there without a pull request, a passing CI run, and an
-approving review, so open changes safely rather than pushing straight to it.
+Thoughtful contributions are welcome when they improve this demo or add a clearly documented analytics engineering
+pattern. To keep the repository focused and maintainable, unrelated changes, generated files, credentials, and
+unvalidated code will not be accepted.
 
-**Workflow:**
+1. Fork the repository or create a focused feature branch
+2. Keep the change limited to one clear purpose
+3. Run the relevant `dbt build` and data tests in your own development environment
+4. Update the documentation when behavior or setup changes
+5. Open a pull request that explains what changed, why it is useful, and how it was validated
 
-1. Fork the repository (or branch directly if you have write access)
-2. Create a feature branch off `main`, named `feat/`, `fix/`, `refactor/`, `docs/`, `test/`, or `chore/` followed by
-   a short, specific slug, for example `feat/customer-ltv-demo`
-3. Commit your changes using [Conventional Commits](https://www.conventionalcommits.org/) (`feat:`, `fix:`, `docs:`,
-   and so on); the PR title is checked against the same convention
-4. Run `dbt build` locally against your own dev schema before opening a PR
-5. Push your branch and open a pull request against `main` using the PR template; fill in the validation section
-   with real `dbt build`/`dbt test` output, not a placeholder
-6. Address CI failures and reviewer feedback; once required checks pass and a code owner approves, the PR can merge
-
-**What gates a merge:**
-
-- **Required status checks** (see [`.github/workflows/ci.yml`](.github/workflows/ci.yml)): YAML lint, SQL lint
-  (`sqlfluff`, configured in [`.sqlfluff`](.sqlfluff)), a conventional PR title check, and a required-checks summary.
-  These checks use no repository or warehouse secrets, so they run safely for both repository branches and forks.
-- **Code owner review**: [`.github/CODEOWNERS`](.github/CODEOWNERS) requires maintainer review on every PR, and branch
-  protection dismisses stale approvals when new commits are pushed.
-- **Protected history**: direct pushes, force pushes, branch deletion, unresolved review conversations, and merge
-  commits are blocked on `main`.
-
-Warehouse deployment remains in dbt Platform, where Snowflake credentials and execution permissions are managed
-centrally. The existing deployment job should be run from dbt Platform after an approved merge, or by its configured
-schedule. GitHub Actions does not hold dbt Platform or Snowflake credentials in this repository.
-
-> **Repo admin setup note:** GitHub branch protection is configured once in repository settings. Keep the required
-> checks aligned with the workflow names below.
-
-<details>
-<summary><strong>One-time repo admin checklist</strong> (click to expand)</summary>
-
-In **GitHub → Settings → Branches → Branch protection rules** (or Rulesets) for `main`:
-
-- Require a pull request before merging
-- Require at least 1 approval and review from Code Owners
-- Dismiss stale pull request approvals when new commits are pushed
-- Require conversation resolution before merging
-- Require status checks to pass before merging, and select the displayed check names:
-  `Conventional PR title`, `Lint YAML`, `Lint SQL (sqlfluff)`, and `Required checks summary`
-- Remove obsolete required checks named `Trusted branch policy`, `dbt Platform CI (build + test)`, or
-  `dbt parse (structure & syntax check)` if they are still configured
-- Require branches to be up to date before merging
-- Require linear history
-- Do not allow force pushes or deletions
-- Apply the rule to administrators too, with no bypass
-
-In **dbt Platform → Deploy → Jobs**:
-
-- Keep warehouse execution inside dbt Platform
-- Run the deployment job after approved merges, or use its configured schedule
-- Keep the monitoring job separate from delivery so warning promotion does not block normal delivery
-
-No API token is required in GitHub for this workflow. You can delete the unused `DBT_CLOUD_API_TOKEN` repository
-secret after this change is merged.
-
-</details>
-
-
+Every contribution is reviewed by the repository maintainer before acceptance. Submitting a pull request does not
+guarantee that it will be merged.
 
 
 ## 👋 About me
