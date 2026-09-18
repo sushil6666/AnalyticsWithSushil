@@ -142,7 +142,10 @@ approving review, so open changes safely rather than pushing straight to it.
 4. Run `dbt build` locally against your own dev schema before opening a PR
 5. Push your branch and open a pull request against `main` using the PR template; fill in the validation section
    with real `dbt build`/`dbt test` output, not a placeholder
-6. Address CI failures and reviewer feedback; once required checks pass and a code owner approves, the PR can merge
+6. For a forked PR, static checks run without secrets. A maintainer must review the code and recreate the approved
+   commits on a trusted branch in this repository before warehouse-backed CI can run
+7. Address CI failures and reviewer feedback; once required checks pass and a code owner approves, the PR can merge
+
 
 **What gates a merge:**
 
@@ -154,8 +157,9 @@ approving review, so open changes safely rather than pushing straight to it.
   `dbt build --select state:modified+` against a real, ephemeral Snowflake schema deferred to `stg_env`. This
   account's plan doesn't expose dbt Platform's native "Triggered by pull requests" webhook, so the
   `dbt-platform-ci` job in [`ci.yml`](.github/workflows/ci.yml) triggers it via the Admin API instead and polls
-  until it finishes, surfacing the result as a normal GitHub status check. Functionally the same gate, wired
-  through Actions rather than a native webhook.
+  until it finishes, surfacing the result as a normal GitHub status check. The `Trusted branch policy` check blocks
+  forked PRs before secrets or warehouse execution are exposed.
+
 - **Code owner review**: [`.github/CODEOWNERS`](.github/CODEOWNERS) requires an approval from a maintainer on every
   PR, and branch protection is configured to dismiss stale approvals when new commits are pushed.
 - **No direct pushes to `main`** and no force-pushes; history stays linear and reviewable.
@@ -174,8 +178,10 @@ In **GitHub → Settings → Branches → Branch protection rules** (or Rulesets
 - Require a pull request before merging; require at least 1 approval; require review from Code Owners
 - Dismiss stale pull request approvals when new commits are pushed
 - Require status checks to pass before merging, and select the displayed check names: `Lint YAML`,
-  `Lint SQL (sqlfluff)`, `Conventional PR title`, `dbt Platform CI (build + test)`, and
-  `Required checks summary` (these only appear in the picker after `ci.yml` has run at least once)
+  `Lint SQL (sqlfluff)`, `Conventional PR title`, `Trusted branch policy`,
+  `dbt Platform CI (build + test)`, and `Required checks summary` (these only appear in the picker after
+  `ci.yml` has run at least once)
+
 
 - Require branches to be up to date before merging
 - Require linear history

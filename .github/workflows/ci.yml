@@ -52,58 +52,86 @@ jobs:
       - run: pip install "sqlfluff==3.*"
       - run: sqlfluff lint models macros --dialect snowflake
 
-  dbt-platform-ci:
-    # This account/plan doesn't expose native "Triggered by pull requests" on
-    # the dbt Platform CI job, so we call the Admin API directly instead of
-    # relying on a GitHub webhook the job can't register for. Functionally
-    # equivalent: a real dbt build/test against Snowflake, gating the PR via
-    # a normal GitHub Actions status check.
-    name: dbt Platform CI (build + test)
+  trusted-source:
+    name: Trusted branch policy
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
-      - name: Trigger and wait for the dbt Platform CI job
+      - name: Block warehouse execution for forked pull requests
         env:
-          DBT_CLOUD_API_TOKEN: ${{ secrets.DBT_CLOUD_API_TOKEN }}
-          DBT_CLOUD_ACCOUNT_ID: "70506183163940"
-          DBT_CLOUD_CI_JOB_ID: "70506183139926"
-          PR_SHA: ${{ github.event.pull_request.head.sha }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
+          HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
+          BASE_REPOSITORY: ${{ github.repository }}
+        run: |
+          if [ "${HEAD_REPOSITORY}" != "${BASE_REPOSITORY}" ]; then
+            echo "Forked pull requests cannot access warehouse-backed CI secrets."
+            echo "A maintainer must review the contribution and recreate it on a trusted repository branch."
+            exit 1
+          fi
+
+  dbt-platform-ci:
+    # This account/plan doesn't expose native "Triggered by pull requests" on
+    # the dbt Platform CI job, so we call the Admin API directly. Only trusted
+    # branches in this repository can reach this job. Forked PRs are blocked
+    # before any dbt token or warehouse-backed execution is available.
+    name: dbt Platform CI (build + test)
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    needs: [trusted-source]
+    runs-on: ubuntu-latest
+    env:
+      DBT_CLOUD_API_TOKEN: ${{ secrets.DBT_CLOUD_API_TOKEN }}
+      DBT_CLOUD_ACCOUNT_ID: "70506183163940"
+      DBT_CLOUD_CI_JOB_ID: "70506183139926"
+      PR_SHA: ${{ github.event.pull_request.head.sha }}
+      PR_NUMBER: ${{ github.event.pull_request.number }}
+    steps:
+      - name: Validate dbt Platform credentials and job access
         run: |
           set -euo pipefail
 
           if [ -z "${DBT_CLOUD_API_TOKEN}" ]; then
-            echo "DBT_CLOUD_API_TOKEN is not configured in GitHub Actions secrets."
+            echo "DBT_CLOUD_API_TOKEN is not configured in repository Actions secrets."
             exit 1
           fi
 
-          trigger_url="https://cloud.getdbt.com/api/v2/accounts/${DBT_CLOUD_ACCOUNT_ID}/jobs/${DBT_CLOUD_CI_JOB_ID}/run/"
+          job_url="https://cloud.getdbt.com/api/v2/accounts/${DBT_CLOUD_ACCOUNT_ID}/jobs/${DBT_CLOUD_CI_JOB_ID}/"
+          curl --fail-with-body -sS \
+            --header "Authorization: Token ${DBT_CLOUD_API_TOKEN}" \
+            "${job_url}" >/dev/null
 
+          echo "dbt Platform authentication and CI job access verified."
+
+      - name: Trigger and wait for the dbt Platform CI job
+        run: |
+          set -euo pipefail
+
+          trigger_url="https://cloud.getdbt.com/api/v2/accounts/${DBT_CLOUD_ACCOUNT_ID}/jobs/${DBT_CLOUD_CI_JOB_ID}/run/"
           run_id=$(curl --fail-with-body -sS \
-            --request POST "$trigger_url" \
+            --request POST "${trigger_url}" \
             --header "Authorization: Token ${DBT_CLOUD_API_TOKEN}" \
             --header "Content-Type: application/json" \
             --data "{\"cause\": \"GitHub Actions PR #${PR_NUMBER}\", \"git_sha\": \"${PR_SHA}\"}" \
             | jq -r '.data.id')
 
-          if [ -z "$run_id" ] || [ "$run_id" = "null" ]; then
+          if [ -z "${run_id}" ] || [ "${run_id}" = "null" ]; then
             echo "Failed to trigger dbt Platform run."
             exit 1
           fi
           echo "Triggered dbt Platform run ${run_id} for commit ${PR_SHA}"
 
           status_url="https://cloud.getdbt.com/api/v2/accounts/${DBT_CLOUD_ACCOUNT_ID}/runs/${run_id}/"
-          # Poll for up to ~40 minutes; the job's own 1800s timeout should
-          # resolve well before this loop gives up.
+          # Poll for up to 40 minutes. The dbt Platform job has its own
+          # independent timeout and should finish before this loop expires.
           for _ in $(seq 1 80); do
             response=$(curl --fail-with-body -sS \
               --header "Authorization: Token ${DBT_CLOUD_API_TOKEN}" \
-              "$status_url")
-            status=$(echo "$response" | jq -r '.data.status')
-            status_humanized=$(echo "$response" | jq -r '.data.status_humanized')
+              "${status_url}")
+            status=$(echo "${response}" | jq -r '.data.status')
+            status_humanized=$(echo "${response}" | jq -r '.data.status_humanized')
             echo "Run ${run_id} status: ${status_humanized}"
 
-            case "$status" in
+            case "${status}" in
               10)
                 echo "dbt Platform CI run succeeded."
                 exit 0
@@ -123,9 +151,9 @@ jobs:
   required-checks:
     name: Required checks summary
     if: always()
-    needs: [lint-yaml, lint-sql, dbt-platform-ci]
-
+    needs: [lint-yaml, lint-sql, trusted-source, dbt-platform-ci]
     runs-on: ubuntu-latest
+
     steps:
       - name: Fail if any dependency failed
         if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
