@@ -24,8 +24,8 @@
 <h1 align="center">AnalyticsWithSushil</h1>
 
 <p align="center">
-  A hands on analytics engineering repository showcasing production style <strong>dbt</strong> and <strong>Snowflake</strong> patterns,
-  built to demonstrate real problems (data quality, alerting, error handling) with real, runnable solutions.
+  A hands-on analytics engineering repository showcasing production-style <strong>dbt</strong> and <strong>Snowflake</strong> patterns,
+  with runnable solutions for data quality, alerting, and resilient error handling.
 </p>
 
 ---
@@ -44,35 +44,35 @@
 
 ## ✨ About this project
 
-`AnalyticsWithSushil` is where I build and document analytics engineering work end to end, not just queries, but the
-operational concerns that come with running dbt in production: data quality gates, alerting strategy, incident
-auditing, and notification design.
+`AnalyticsWithSushil` is where I build and document end-to-end analytics engineering patterns—not just queries, but
+also the operational concerns that come with running dbt in production: data quality gates, alerting strategy,
+incident auditing, and notification design.
 
-Each demo in this repo is:
+Each demo in this repository is:
 
-- **Self-contained**: seeded data, models, macros, and tests you can run immediately with no external dependencies.
-- **Documented**: a dedicated `README.md` and demo guide walk through exactly what to run and what to expect.
-- **Realistic**: modeled on problems analytics engineers actually hit (malformed source data, silent pipeline
-  failures, alert fatigue), not toy examples.
+- **Self-contained**: seeded data, models, macros, and tests you can run immediately without external data dependencies.
+- **Documented**: a dedicated `README.md` and demo guide explain what to run and what to expect.
+- **Realistic**: modeled on problems analytics engineers encounter in production, including malformed source data,
+  pipeline failures, and alert fatigue.
 
 ## 🚦 Featured demo: `on_error_continue` payment feed
 
-The flagship demo lives in [`models/on_error_continue_demo/`](models/on_error_continue_demo) and shows how to keep a
-pipeline delivering data and surface data quality incidents, without one blocking the other.
+The flagship demo lives in [`models/on_error_continue_demo/`](models/on_error_continue_demo). It shows how to preserve
+useful incident evidence when validation fails, without hiding the original failure.
 
 **What it demonstrates:**
 
-- **`on_error: continue`** on a Snowflake load so a single malformed row doesn't take down the whole batch.
-- **Safe vs. strict parsing** (`TRY_TO_DECIMAL` vs. `TO_DECIMAL`), toggled with a project var, to compare graceful
-  degradation against hard failure.
-- **A dedicated review queue model** that reads the raw seed directly, so alert evidence stays current even if the
-  validator itself fails.
-- **An incident audit model** that declares its DAG dependency without querying the (possibly broken) validator.
-- **Two job alerting pattern**: a delivery job that can succeed with a warning, and a separate monitoring job that
-  promotes that warning to a job level error for Slack/email routing, so alerting logic never blocks delivery.
+- **`on_error: continue`** allows eligible downstream nodes to keep running after the validator fails.
+- **Safe vs. strict parsing** (`TRY_TO_DECIMAL` vs. `TO_DECIMAL`), toggled with a project variable, compares graceful
+  degradation with a hard failure.
+- **A dedicated review queue model** reads the raw seed directly, keeping alert evidence current even if the validator
+  fails before producing a usable relation.
+- **An incident audit model** declares the required DAG dependency without querying the potentially failed validator.
+- **A two-job alerting pattern** separates delivery from monitoring: the delivery job can succeed with a warning, while
+  the monitoring job promotes that warning to a job-level error for Slack or email routing.
 
-Start here: [`models/on_error_continue_demo/README.md`](models/on_error_continue_demo/README.md) for the full
-walkthrough, and [`DEMO_GUIDE.md`](models/on_error_continue_demo/DEMO_GUIDE.md) for a presenter style script.
+Start with [`models/on_error_continue_demo/README.md`](models/on_error_continue_demo/README.md) for the full walkthrough
+and [`DEMO_GUIDE.md`](models/on_error_continue_demo/DEMO_GUIDE.md) for a presenter-style script.
 
 ```bash
 dbt seed --select on_error_continue_payment_events
