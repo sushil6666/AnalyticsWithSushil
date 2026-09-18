@@ -147,8 +147,9 @@ approving review, so open changes safely rather than pushing straight to it.
 **What gates a merge:**
 
 - **Required status checks** (see [`.github/workflows/ci.yml`](.github/workflows/ci.yml)): YAML lint, SQL lint
-  (`sqlfluff`, config in [`.sqlfluff`](.sqlfluff)), a conventional PR title check, and `dbt parse` to catch
-  structural and syntax errors before anything touches the warehouse.
+  (`sqlfluff`, config in [`.sqlfluff`](.sqlfluff)), a conventional PR title check, and a dbt Platform build using
+  the project's dbt v2 Stable engine against Snowflake.
+
 - **A dbt Platform CI job** (`CI - pull request checks`, configured in dbt Cloud, not in this repo) that runs
   `dbt build --select state:modified+` against a real, ephemeral Snowflake schema deferred to `stg_env`. This
   account's plan doesn't expose dbt Platform's native "Triggered by pull requests" webhook, so the
@@ -172,8 +173,10 @@ In **GitHub → Settings → Branches → Branch protection rules** (or Rulesets
 
 - Require a pull request before merging; require at least 1 approval; require review from Code Owners
 - Dismiss stale pull request approvals when new commits are pushed
-- Require status checks to pass before merging, and select: `lint-yaml`, `lint-sql`, `dbt-parse`, `pr-title`,
-  `dbt-platform-ci`, `required-checks` (these only appear in the picker after `ci.yml` has run at least once)
+- Require status checks to pass before merging, and select the displayed check names: `Lint YAML`,
+  `Lint SQL (sqlfluff)`, `Conventional PR title`, `dbt Platform CI (build + test)`, and
+  `Required checks summary` (these only appear in the picker after `ci.yml` has run at least once)
+
 - Require branches to be up to date before merging
 - Require linear history
 - Do not allow force pushes; do not allow deletions
@@ -193,9 +196,10 @@ In **GitHub → Settings → Secrets and variables → Actions**, add:
   [`cd.yml`](.github/workflows/cd.yml) (trigger the production run on merge) and the `dbt-platform-ci` job in
   [`ci.yml`](.github/workflows/ci.yml) (trigger + poll the CI job per PR)
 
-No Snowflake credentials are ever needed in GitHub: `ci.yml`'s `dbt parse` step uses placeholder values because
-parsing never opens a warehouse connection, and the real build/test runs inside dbt Platform, which already holds
-the production credentials securely.
+No Snowflake credentials are needed in GitHub. Static linting runs without warehouse access, and the real parse,
+build, and test run executes inside dbt Platform using the project's dbt v2 Stable engine and centrally managed
+Snowflake credentials.
+
 
 </details>
 

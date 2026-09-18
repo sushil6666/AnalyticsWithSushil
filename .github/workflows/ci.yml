@@ -52,41 +52,6 @@ jobs:
       - run: pip install "sqlfluff==3.*"
       - run: sqlfluff lint models macros --dialect snowflake
 
-  dbt-parse:
-    name: dbt parse (structure & syntax check)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-      - run: pip install dbt-snowflake
-      - name: Write a parse-only profile
-        # dbt parse never opens a warehouse connection, so these values only
-        # need to be well-formed, not real. The actual build/test run against
-        # live data happens in the dbt Platform CI job (see README), which
-        # holds real credentials centrally instead of in GitHub secrets.
-        run: |
-          mkdir -p ~/.dbt
-          cat > ~/.dbt/profiles.yml <<'EOF'
-          dbt_practice:
-            target: ci
-            outputs:
-              ci:
-                type: snowflake
-                account: ci_placeholder
-                user: ci_placeholder
-                password: ci_placeholder
-                role: ci_placeholder
-                warehouse: ci_placeholder
-                database: ci_placeholder
-                schema: ci_placeholder
-                threads: 1
-          EOF
-      - run: dbt deps
-      - run: dbt parse --no-partial-parse
-
-
   dbt-platform-ci:
     # This account/plan doesn't expose native "Triggered by pull requests" on
     # the dbt Platform CI job, so we call the Admin API directly instead of
@@ -107,7 +72,13 @@ jobs:
         run: |
           set -euo pipefail
 
+          if [ -z "${DBT_CLOUD_API_TOKEN}" ]; then
+            echo "DBT_CLOUD_API_TOKEN is not configured in GitHub Actions secrets."
+            exit 1
+          fi
+
           trigger_url="https://cloud.getdbt.com/api/v2/accounts/${DBT_CLOUD_ACCOUNT_ID}/jobs/${DBT_CLOUD_CI_JOB_ID}/run/"
+
           run_id=$(curl --fail-with-body -sS \
             --request POST "$trigger_url" \
             --header "Authorization: Token ${DBT_CLOUD_API_TOKEN}" \
@@ -152,7 +123,8 @@ jobs:
   required-checks:
     name: Required checks summary
     if: always()
-    needs: [lint-yaml, lint-sql, dbt-parse, dbt-platform-ci]
+    needs: [lint-yaml, lint-sql, dbt-platform-ci]
+
     runs-on: ubuntu-latest
     steps:
       - name: Fail if any dependency failed
