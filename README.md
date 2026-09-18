@@ -44,7 +44,7 @@
 
 ## ✨ About this project
 
-`AnalyticsWithSushil` is where I build and document end-to-end analytics engineering patterns—not just queries, but
+`AnalyticsWithSushil` is where I build and document end-to-end analytics engineering patterns, not just queries but
 also the operational concerns that come with running dbt in production: data quality gates, alerting strategy,
 incident auditing, and notification design.
 
