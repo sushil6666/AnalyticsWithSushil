@@ -1,0 +1,6 @@
+event_id,customer_id,payment_amount,payment_status,event_timestamp
+SA-1001,CUST-101,125.50,approved,2026-09-15 09:10:00
+SA-1002,CUST-102,48.25,declined,2026-09-15 09:15:00
+SA-1003,CUST-103,210.00,approved,2026-09-16 10:20:00
+SA-1004,CUST-104,15.75,refunded,2026-09-16 11:05:00
+SA-1005,CUST-105,89.99,approved,2026-09-17 08:45:00

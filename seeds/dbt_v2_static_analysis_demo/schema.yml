@@ -1,0 +1,43 @@
+version: 2
+
+seeds:
+  - name: dbt_v2_static_analysis_payment_events
+    description: >
+      Synthetic, fully typed payment events used to demonstrate dbt v2 Stable
+      strict static analysis before Snowflake execution.
+    config:
+      schema: dbt_v2_static_analysis_demo_seed
+      quote_columns: false
+      static_analysis: strict
+      column_types:
+        event_id: varchar
+        customer_id: varchar
+        payment_amount: number(12, 2)
+        payment_status: varchar
+        event_timestamp: timestamp_ntz
+      tags: ['dbt_v2_static_analysis_demo']
+    columns:
+      - name: event_id
+        description: Unique payment event identifier.
+        data_tests:
+          - not_null
+          - unique
+      - name: customer_id
+        description: Customer associated with the payment event.
+        data_tests:
+          - not_null
+      - name: payment_amount
+        description: Typed payment amount used by static type checking.
+        data_tests:
+          - not_null
+      - name: payment_status
+        description: Gateway outcome for the payment event.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['approved', 'declined', 'refunded']
+      - name: event_timestamp
+        description: Timestamp when the payment event occurred.
+        data_tests:
+          - not_null
