@@ -33,7 +33,7 @@
 ## 📖 Table of contents
 
 - [About this project](#-about-this-project)
-- [Featured demo: on_error_continue](#-featured-demo-on_error_continue-payment-feed)
+- [Featured demos](#-featured-demos)
 - [Repository structure](#-repository-structure)
 - [Tech stack](#️-tech-stack)
 - [Getting started](#-getting-started)
@@ -44,8 +44,8 @@
 
 ## ✨ About this project
 
-`AnalyticsWithSushil` is where I build and document end-to-end analytics engineering patterns—not just queries, but
-also the operational concerns that come with running dbt in production: data quality gates, alerting strategy,
+`AnalyticsWithSushil` is where I build and document end-to-end analytics engineering patterns, including the
+operational concerns that come with running dbt in production: data quality gates, static analysis, alerting strategy,
 incident auditing, and notification design.
 
 Each demo in this repository is:
@@ -53,57 +53,69 @@ Each demo in this repository is:
 - **Self-contained**: seeded data, models, macros, and tests you can run immediately without external data dependencies.
 - **Documented**: a dedicated `README.md` and demo guide explain what to run and what to expect.
 - **Realistic**: modeled on problems analytics engineers encounter in production, including malformed source data,
-  pipeline failures, and alert fatigue.
+  SQL mistakes, pipeline failures, and alert fatigue.
 
-## 🚦 Featured demo: `on_error_continue` payment feed
+## 🚦 Featured demos
 
-The flagship demo lives in [`models/on_error_continue_demo/`](models/on_error_continue_demo). It shows how to preserve
-useful incident evidence when validation fails, without hiding the original failure.
+### 1. `on_error_continue` payment feed
 
-**What it demonstrates:**
+The demo in [`models/on_error_continue_demo/`](models/on_error_continue_demo) shows how to preserve useful incident
+evidence when validation fails without hiding the original failure.
 
-- **`on_error: continue`** allows eligible downstream nodes to keep running after the validator fails.
-- **Safe vs. strict parsing** (`TRY_TO_DECIMAL` vs. `TO_DECIMAL`), toggled with a project variable, compares graceful
-  degradation with a hard failure.
-- **A dedicated review queue model** reads the raw seed directly, keeping alert evidence current even if the validator
-  fails before producing a usable relation.
-- **An incident audit model** declares the required DAG dependency without querying the potentially failed validator.
-- **A two-job alerting pattern** separates delivery from monitoring: the delivery job can succeed with a warning, while
-  the monitoring job promotes that warning to a job-level error for Slack or email routing.
-
-Start with [`models/on_error_continue_demo/README.md`](models/on_error_continue_demo/README.md) for the full walkthrough
-and [`DEMO_GUIDE.md`](models/on_error_continue_demo/DEMO_GUIDE.md) for a presenter-style script.
+It covers `on_error: continue`, safe and strict parsing, an independent review queue, incident auditing, warning-level
+data tests, and separate delivery and monitoring jobs for Slack or email routing.
 
 ```bash
-dbt seed --select on_error_continue_payment_events
 dbt build --select on_error_continue_payment_events+
 ```
 
 Expected result: **26 passed, 1 warned, 0 failed.**
+
+Read the [walkthrough](models/on_error_continue_demo/README.md) and
+[presenter guide](models/on_error_continue_demo/DEMO_GUIDE.md).
+
+### 2. dbt v2 Stable static analysis
+
+The demo in [`models/dbt_v2_static_analysis_demo/`](models/dbt_v2_static_analysis_demo) shows how strict static
+analysis catches a missing column or Snowflake function type mismatch before warehouse execution begins.
+
+It uses a safe default plus two intentional failure modes controlled through a project variable, so normal project
+builds remain green and the demo can be reset without editing code.
+
+```bash
+dbt build --select dbt_v2_static_analysis_payment_events+
+```
+
+Read the [walkthrough](models/dbt_v2_static_analysis_demo/README.md) and
+[presenter guide](models/dbt_v2_static_analysis_demo/DEMO_GUIDE.md).
 
 ## 🧩 Repository structure
 
 ```text
 AnalyticsWithSushil/
 ├── models/
-│   └── on_error_continue_demo/     # payment feed quality & alerting demo
-│       ├── on_error_continue_payment_validation.sql
-│       ├── on_error_continue_payment_review_queue.sql
-│       ├── on_error_continue_incident_audit.sql
-│       ├── on_error_continue_feed_quality.sql
-│       ├── schema.yml / groups.yml
+│   ├── on_error_continue_demo/
+│   │   ├── schema.yml / groups.yml
+│   │   ├── README.md
+│   │   └── DEMO_GUIDE.md
+│   └── dbt_v2_static_analysis_demo/
+│       ├── dbt_v2_static_analysis_typed_payments.sql
+│       ├── dbt_v2_static_analysis_daily_quality.sql
+│       ├── schema.yml
 │       ├── README.md
 │       └── DEMO_GUIDE.md
 ├── macros/
-│   └── on_error_continue_demo/     # feed policy macro & custom generic test
+│   └── on_error_continue_demo/
 ├── seeds/
-│   └── on_error_continue_demo/     # seeded payment events (incl. bad rows)
+│   ├── on_error_continue_demo/
+│   └── dbt_v2_static_analysis_demo/
 ├── dbt_project.yml
 ├── LICENSE.txt
 └── README.md
 ```
 
 ## 🛠️ Tech stack
+
 
 | Layer                    | Tool                                        |
 | ------------------------- | -------------------------------------------- |

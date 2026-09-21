@@ -1,4 +1,4 @@
-name: on_error_continue_demo
+name: analytics_with_sushil
 version: 1.0.0
 config-version: 2
 
@@ -8,7 +8,6 @@ model-paths: ["models"]
 seed-paths: ["seeds"]
 macro-paths: ["macros"]
 packages-install-path: "vendor_packages"
-
 
 clean-targets:
   - target
@@ -22,3 +21,4 @@ dbt-cloud:
 vars:
   on_error_continue_demo_strict_validation: false
   on_error_continue_demo_exception_mode: safe
+  dbt_v2_static_analysis_demo_error: safe

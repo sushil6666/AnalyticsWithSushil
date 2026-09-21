@@ -1,0 +1,69 @@
+version: 2
+
+models:
+  - name: dbt_v2_static_analysis_typed_payments
+    description: >
+      Typed payment events analyzed in strict mode. The safe default preserves
+      the declared schema, while demo variables can intentionally render a
+      missing column or invalid function argument before execution.
+    config:
+      static_analysis: strict
+    columns:
+      - name: event_id
+        description: Unique payment event identifier.
+        data_tests:
+          - not_null
+          - unique
+      - name: customer_id
+        description: Customer associated with the payment event.
+        data_tests:
+          - not_null
+      - name: payment_amount
+        description: Payment amount validated as a numeric value.
+        data_tests:
+          - not_null
+      - name: payment_status
+        description: Gateway outcome retained for quality reporting.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['approved', 'declined', 'refunded']
+      - name: event_timestamp
+        description: Timestamp when the payment event occurred.
+        data_tests:
+          - not_null
+
+  - name: dbt_v2_static_analysis_daily_quality
+    description: >
+      Daily payment summary downstream of the strict typed-events model. It
+      demonstrates that the dependency slice does not begin executing when
+      static analysis proves an upstream query invalid.
+    config:
+      static_analysis: strict
+    columns:
+      - name: event_date
+        description: Calendar date of the payment activity.
+        data_tests:
+          - not_null
+          - unique
+      - name: total_events
+        description: Number of payment events received on the date.
+        data_tests:
+          - not_null
+      - name: approved_events
+        description: Number of approved payment events.
+        data_tests:
+          - not_null
+      - name: declined_events
+        description: Number of declined payment events.
+        data_tests:
+          - not_null
+      - name: refunded_events
+        description: Number of refunded payment events.
+        data_tests:
+          - not_null
+      - name: total_payment_amount
+        description: Sum of payment amounts received on the date.
+        data_tests:
+          - not_null
