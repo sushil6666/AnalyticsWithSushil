@@ -44,9 +44,10 @@
 
 ## ✨ About this project
 
-`AnalyticsWithSushil` is where I build and document end-to-end analytics engineering patterns, including the
-operational concerns that come with running dbt in production: data quality gates, static analysis, alerting strategy,
-incident auditing, and notification design.
+`AnalyticsWithSushil` is where I build and document end-to-end analytics engineering patterns, including queries and
+the operational concerns that come with running dbt in production: data quality gates, static analysis, alerting
+strategy, incident auditing, and notification design.
+
 
 Each demo in this repository is:
 
