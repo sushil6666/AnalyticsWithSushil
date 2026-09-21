@@ -77,18 +77,25 @@ Read the [walkthrough](models/on_error_continue_demo/README.md) and
 
 ### 2. dbt v2 Stable static analysis
 
-The demo in [`models/dbt_v2_static_analysis_demo/`](models/dbt_v2_static_analysis_demo) shows how strict static
-analysis catches a missing column or Snowflake function type mismatch before warehouse execution begins.
+This demo shows how dbt catches SQL mistakes before Snowflake runs the query.
 
-It uses a safe default plus two intentional failure modes controlled through a project variable, so normal project
-builds remain green and the demo can be reset without editing code.
+It demonstrates two common errors:
+
+- `payment_amunt`, a misspelling of `payment_amount`
+- `sqrt(event_timestamp)`, which passes a timestamp to a numeric function
+
+The normal command builds successfully:
 
 ```bash
 dbt build --select dbt_v2_static_analysis_payment_events+
 ```
 
-Read the [walkthrough](models/dbt_v2_static_analysis_demo/README.md) and
+The error modes are activated with a project variable, so the committed project
+remains safe by default and can be reset without editing code.
+
+Read the [simple walkthrough](models/dbt_v2_static_analysis_demo/README.md) and
 [presenter guide](models/dbt_v2_static_analysis_demo/DEMO_GUIDE.md).
+
 
 ## 🧩 Repository structure
 

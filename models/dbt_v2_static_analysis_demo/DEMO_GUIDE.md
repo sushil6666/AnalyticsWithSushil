@@ -1,86 +1,109 @@
 # dbt v2 Stable static analysis presentation guide
 
-## Purpose
+## What you are showing
 
-Show that dbt v2 Stable can catch column and type errors before Snowflake starts
-executing a dependency slice.
+This demo proves that dbt can catch a bad column name or an invalid data type
+before Snowflake executes the model.
 
-## Scenario
-
-A payment feed has a declared schema. A typed model feeds a daily quality
-summary. During development, an engineer introduces either a misspelled amount
-column or an invalid `SQRT` call on a timestamp.
-
-## Demo flow
-
-
-### 1. Explain the DAG
+The audience only needs to remember this flow:
 
 ```text
-dbt_v2_static_analysis_payment_events
-                |
-                v
-dbt_v2_static_analysis_typed_payments
-                |
-                v
-dbt_v2_static_analysis_daily_quality
+Payment seed
+    |
+    v
+Typed payment model
+    |
+    v
+Daily payment summary
 ```
 
-All three resources use `static_analysis: strict`. Strictness cannot increase
-downstream, so the seed starts the dependency chain in strict mode.
+## Step 1. Show the safe build
 
-### 2. Establish the safe baseline
+Run:
 
 ```bash
 dbt build --select dbt_v2_static_analysis_payment_events+
 ```
 
-Expected output:
+Say:
 
-- Five seed rows
-- Two model relations
-- Three daily summary rows
-- All tests passing
+> This is the normal path. dbt loads five payment events, builds two models,
+> and runs the attached tests. All 26 results succeed.
+
+Expected values:
+
+- Five payment events
+- Three summary dates
 - Total payment amount of 489.49
 
-### 3. Introduce a missing column without editing code
+## Step 2. Show a misspelled column
+
+Run:
 
 ```bash
 dbt build --select dbt_v2_static_analysis_payment_events+ --vars '{"dbt_v2_static_analysis_demo_error": "missing_column"}'
 ```
 
-Talking point: the rendered SQL references `payment_amunt`. The typed upstream
-seed proves that column does not exist, so dbt can reject the query before
-warehouse execution.
+Say:
 
-### 4. Introduce a function type mismatch
+> The model now asks for `payment_amunt`, but the real column is
+> `payment_amount`. dbt understands the upstream seed schema and stops the
+> mistake before the invalid model runs.
+
+Expected error:
+
+```text
+UnresolvedIdentifier (dbt0227)
+No column PAYMENT_AMUNT found
+```
+
+Point out that dbt also lists the valid available columns. The downstream daily
+summary is skipped because its parent model is invalid.
+
+## Step 3. Show a wrong data type
+
+Run:
 
 ```bash
 dbt build --select dbt_v2_static_analysis_payment_events+ --vars '{"dbt_v2_static_analysis_demo_error": "type_mismatch"}'
 ```
 
-Talking point: `event_timestamp` is declared as `timestamp_ntz`, while the
-supported `SQRT` signature requires `FLOAT`. Static analysis reports
-`FunctionResolutionFailed (dbt0209)` before Snowflake executes the model.
+Say:
 
+> The model now passes `event_timestamp` to `SQRT`. A timestamp is not a number,
+> so dbt rejects the function call before Snowflake executes the model.
 
-### 5. Return to green
+Expected error:
+
+```text
+FunctionResolutionFailed (dbt0209)
+Actual argument: TIMESTAMP_NTZ
+Expected argument: FLOAT
+```
+
+## Step 4. Return to green
+
+Run:
 
 ```bash
 dbt build --select dbt_v2_static_analysis_payment_events+
 ```
 
-No file edit or cleanup is needed because `safe` is the default mode.
+Say:
 
-## Key takeaway
+> Safe mode is the default. We do not need to edit or restore any project file.
 
-Runtime tests validate data after relations exist. Static analysis validates
-SQL structure and types before execution. Mature dbt projects benefit from both.
+## Final takeaway
+
+```text
+Data tests check the data after a model is built.
+Static analysis checks the SQL before the model runs.
+Strong dbt projects use both.
+```
 
 ## Troubleshooting
 
-- Confirm the command runs on dbt v2 Stable, not dbt Core.
-- Confirm the session is authenticated; strict mode can fall back to baseline
-  when authentication is unavailable.
-- Keep the seed and models at the same strictness level because downstream
-  resources cannot be stricter than their parents.
+- Confirm the command runs on dbt v2 Stable
+- Confirm the dbt session is authenticated
+- Use the exact variable values `safe`, `missing_column`, or `type_mismatch`
+- Run the safe command at the end so the development relations are restored
