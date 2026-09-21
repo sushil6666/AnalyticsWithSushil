@@ -25,7 +25,7 @@
 
 <p align="center">
   A hands-on analytics engineering repository showcasing production-style <strong>dbt</strong> and <strong>Snowflake</strong> patterns,
-  with runnable solutions for data quality, alerting, and resilient error handling.
+  with runnable solutions for static SQL analysis, data quality, alerting, and resilient error handling.
 </p>
 
 ---
@@ -48,10 +48,9 @@
 the operational concerns that come with running dbt in production: data quality gates, static analysis, alerting
 strategy, incident auditing, and notification design.
 
-
 Each demo in this repository is:
 
-- **Self-contained**: seeded data, models, macros, and tests you can run immediately without external data dependencies.
+- **Self-contained**: seeded data, models, and tests you can run immediately, with macros included where needed.
 - **Documented**: a dedicated `README.md` and demo guide explain what to run and what to expect.
 - **Realistic**: modeled on problems analytics engineers encounter in production, including malformed source data,
   SQL mistakes, pipeline failures, and alert fatigue.
@@ -96,7 +95,6 @@ remains safe by default and can be reset without editing code.
 Read the [simple walkthrough](models/dbt_v2_static_analysis_demo/README.md) and
 [presenter guide](models/dbt_v2_static_analysis_demo/DEMO_GUIDE.md).
 
-
 ## 🧩 Repository structure
 
 ```text
@@ -124,27 +122,39 @@ AnalyticsWithSushil/
 
 ## 🛠️ Tech stack
 
-
 | Layer                    | Tool                                        |
-| ------------------------- | -------------------------------------------- |
-| Transformation             | [dbt](https://www.getdbt.com/) (v2 Stable)  |
-| Warehouse                  | [Snowflake](https://www.snowflake.com/)     |
-| Orchestration & alerting   | dbt Platform jobs, Slack & email notifications |
-| Language                   | SQL, Jinja, Python                          |
+| ------------------------ | ------------------------------------------- |
+| Transformation           | [dbt](https://www.getdbt.com/) (v2 Stable) |
+| Warehouse                | [Snowflake](https://www.snowflake.com/)    |
+| Orchestration & alerting | dbt Platform jobs, Slack & email notifications |
+| Language                 | SQL, Jinja, Python                          |
 
 ## 🚀 Getting started
+
+Clone the repository:
 
 ```bash
 git clone https://github.com/sushil6666/AnalyticsWithSushil.git
 cd AnalyticsWithSushil
+```
 
-dbt deps
-dbt seed --select on_error_continue_payment_events
+Run the `on_error_continue` demo:
+
+```bash
 dbt build --select on_error_continue_payment_events+
 ```
 
-From there, follow [`models/on_error_continue_demo/README.md`](models/on_error_continue_demo/README.md) to walk
-through strict validation failures, Jinja warning/error modes, and the Slack/email alerting setup.
+Then follow its [walkthrough](models/on_error_continue_demo/README.md) to test strict validation, Jinja warning and
+error modes, and Slack or email alerting.
+
+Run the dbt v2 Stable static-analysis demo:
+
+```bash
+dbt build --select dbt_v2_static_analysis_payment_events+
+```
+
+Then follow its [walkthrough](models/dbt_v2_static_analysis_demo/README.md) to test the missing-column and wrong-type
+failure modes. Both demos default to safe behavior.
 
 ## 🤝 Contributing
 
@@ -161,11 +171,10 @@ unvalidated code will not be accepted.
 Every contribution is reviewed by the repository maintainer before acceptance. Submitting a pull request does not
 guarantee that it will be merged.
 
-
 ## 👋 About me
 
 Hi, I'm **Sushil Behera**, an analytics engineer who works at the intersection of data modeling, warehouse
-engineering, and pipeline reliability. This repo is my public workspace for turning day to day analytics engineering
+engineering, and pipeline reliability. This repo is my public workspace for turning day-to-day analytics engineering
 problems into clear, reproducible demos.
 
 I care about pipelines that fail loudly in the right places and quietly in the wrong ones. That's the thinking
@@ -198,4 +207,3 @@ This project is licensed under the [MIT License](LICENSE.txt), copyright (c) 202
 <p align="center">
   <img src="https://capsule-render.vercel.app/api?type=soft&color=0:0ea5e9,100:8b5cf6&height=90&section=footer&text=Built%20for%20insights%20and%20impact&fontSize=24" alt="footer banner" />
 </p>
-
