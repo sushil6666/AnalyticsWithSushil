@@ -95,6 +95,49 @@ remains safe by default and can be reset without editing code.
 Read the [simple walkthrough](models/dbt_v2_static_analysis_demo/README.md) and
 [presenter guide](models/dbt_v2_static_analysis_demo/DEMO_GUIDE.md).
 
+### 3. dbt v2 Stable column-level lineage
+
+This demo shows where each output column comes from.
+
+It follows three small data steps:
+
+```text
+dbt_v2_cll_order_items
+        ↓
+dbt_v2_cll_enriched_order_items
+        ↓
+dbt_v2_cll_customer_order_summary
+```
+
+The first step loads sample order items from a CSV file. The second step
+calculates `line_amount` from `quantity * unit_price`. The final step adds the
+line amounts together to create `gross_revenue` for each customer.
+
+dbt can trace the full path:
+
+```text
+quantity and unit_price
+          ↓
+      line_amount
+          ↓
+     gross_revenue
+```
+
+Build the demo and ask dbt to record the column connections:
+
+```bash
+dbt build --select dbt_v2_cll_order_items+ --write-index --generate-info-schema --static-analysis strict
+```
+
+Show the recorded column connections:
+
+```bash
+dbt show --info column_lineage --limit 100
+```
+
+Read the [beginner walkthrough](models/dbt_v2_column_lineage_demo/README.md) and
+[presenter guide](models/dbt_v2_column_lineage_demo/DEMO_GUIDE.md).
+
 ## 🧩 Repository structure
 
 ```text
@@ -104,9 +147,15 @@ AnalyticsWithSushil/
 │   │   ├── schema.yml / groups.yml
 │   │   ├── README.md
 │   │   └── DEMO_GUIDE.md
-│   └── dbt_v2_static_analysis_demo/
-│       ├── dbt_v2_static_analysis_typed_payments.sql
-│       ├── dbt_v2_static_analysis_daily_quality.sql
+│   ├── dbt_v2_static_analysis_demo/
+│   │   ├── dbt_v2_static_analysis_typed_payments.sql
+│   │   ├── dbt_v2_static_analysis_daily_quality.sql
+│   │   ├── schema.yml
+│   │   ├── README.md
+│   │   └── DEMO_GUIDE.md
+│   └── dbt_v2_column_lineage_demo/
+│       ├── dbt_v2_cll_enriched_order_items.sql
+│       ├── dbt_v2_cll_customer_order_summary.sql
 │       ├── schema.yml
 │       ├── README.md
 │       └── DEMO_GUIDE.md
@@ -114,7 +163,8 @@ AnalyticsWithSushil/
 │   └── on_error_continue_demo/
 ├── seeds/
 │   ├── on_error_continue_demo/
-│   └── dbt_v2_static_analysis_demo/
+│   ├── dbt_v2_static_analysis_demo/
+│   └── dbt_v2_column_lineage_demo/
 ├── dbt_project.yml
 ├── LICENSE.txt
 └── README.md
@@ -154,7 +204,16 @@ dbt build --select dbt_v2_static_analysis_payment_events+
 ```
 
 Then follow its [walkthrough](models/dbt_v2_static_analysis_demo/README.md) to test the missing-column and wrong-type
-failure modes. Both demos default to safe behavior.
+failure modes. The demo defaults to safe behavior.
+
+Run the dbt v2 Stable column-level-lineage demo:
+
+```bash
+dbt build --select dbt_v2_cll_order_items+ --write-index --generate-info-schema --static-analysis strict
+```
+
+Then follow its [walkthrough](models/dbt_v2_column_lineage_demo/README.md) to inspect passthrough, rename,
+transformation, and aggregation lineage in dbt Docs v2 or from the generated Information Schema.
 
 ## 🤝 Contributing
 

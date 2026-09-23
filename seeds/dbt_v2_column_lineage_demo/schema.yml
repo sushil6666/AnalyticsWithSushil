@@ -1,0 +1,50 @@
+version: 2
+
+seeds:
+  - name: dbt_v2_cll_order_items
+    description: >
+      Synthetic order line items used to demonstrate column-level lineage in
+      dbt v2 Stable. The seed has one row per order item.
+    config:
+      schema: dbt_v2_column_lineage_demo_seed
+      quote_columns: false
+      static_analysis: strict
+      column_types:
+        order_item_id: varchar
+        order_id: varchar
+        customer_id: varchar
+        product_name: varchar
+        quantity: number(12, 0)
+        unit_price: number(12, 2)
+        order_timestamp: timestamp_ntz
+      tags: ['dbt_v2_column_lineage_demo']
+    columns:
+      - name: order_item_id
+        description: Unique identifier for an order line item.
+        data_tests:
+          - not_null
+          - unique
+      - name: order_id
+        description: Identifier shared by all line items in one order.
+        data_tests:
+          - not_null
+      - name: customer_id
+        description: Customer who placed the order.
+        data_tests:
+          - not_null
+      - name: product_name
+        description: Product label captured when the order was placed.
+        data_tests:
+          - not_null
+      - name: quantity
+        description: Number of product units on the line item.
+        data_tests:
+          - not_null
+      - name: unit_price
+        description: Price of one product unit at order time.
+        data_tests:
+          - not_null
+      - name: order_timestamp
+        description: Timestamp when the order was placed.
+        data_tests:
+          - not_null
