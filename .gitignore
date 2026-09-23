@@ -4,3 +4,6 @@ logs/
 dbt_internal_packages/
 edr_target/
 vendor_packages/
+
+# Local documentation preferences
+DOCUMENTATION_STANDARDS.md
