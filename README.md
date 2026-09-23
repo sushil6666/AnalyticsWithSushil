@@ -232,7 +232,7 @@ guarantee that it will be merged.
 
 ## 👋 About me
 
-Hi, I'm **Sushil Behera**, an analytics engineer who works at the intersection of data modeling, warehouse
+Hi, I am **Sushil Behera**, an analytics engineer who works at the intersection of data modeling, warehouse
 engineering, and pipeline reliability. This repo is my public workspace for turning day-to-day analytics engineering
 problems into clear, reproducible demos.
 
