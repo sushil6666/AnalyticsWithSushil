@@ -92,7 +92,7 @@ dbt build --select dbt_v2_static_analysis_payment_events+
 The error modes are activated with a project variable, so the committed project
 remains safe by default and can be reset without editing code.
 
-Read the [simple walkthrough](models/dbt_v2_static_analysis_demo/README.md) and
+Read the [walkthrough](models/dbt_v2_static_analysis_demo/README.md) and
 [presenter guide](models/dbt_v2_static_analysis_demo/DEMO_GUIDE.md).
 
 ### 3. dbt v2 Stable column-level lineage
@@ -135,7 +135,7 @@ Show the recorded column connections:
 dbt show --info column_lineage --limit 100
 ```
 
-Read the [beginner walkthrough](models/dbt_v2_column_lineage_demo/README.md) and
+Read the [walkthrough](models/dbt_v2_column_lineage_demo/README.md) and
 [presenter guide](models/dbt_v2_column_lineage_demo/DEMO_GUIDE.md).
 
 ## 🧩 Repository structure
