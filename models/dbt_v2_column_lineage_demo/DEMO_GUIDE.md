@@ -2,8 +2,7 @@
 
 ## Purpose
 
-This guide helps you present the dbt v2 Stable column-level lineage demo to
-someone who is new to dbt.
+This guide helps you present the dbt v2 Stable column-level lineage.
 
 The demo answers one main question:
 
