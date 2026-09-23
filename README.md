@@ -226,6 +226,7 @@ unvalidated code will not be accepted.
 3. Run the relevant `dbt build` and data tests in your own development environment
 4. Update the documentation when behavior or setup changes
 5. Open a pull request that explains what changed, why it is useful, and how it was validated
+6. Follow the [documentation standards](DOCUMENTATION_STANDARDS.md) for public demos and guides
 
 Every contribution is reviewed by the repository maintainer before acceptance. Submitting a pull request does not
 guarantee that it will be merged.
