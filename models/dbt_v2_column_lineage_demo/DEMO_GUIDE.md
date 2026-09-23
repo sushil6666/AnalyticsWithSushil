@@ -4,6 +4,7 @@
 
 Use this guide to show a new dbt user where a final column comes from.
 
+
 The main example is:
 
 ```text
