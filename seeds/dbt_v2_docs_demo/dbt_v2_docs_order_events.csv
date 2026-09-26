@@ -1,0 +1,7 @@
+order_id,customer_id,order_amount,order_status,ordered_at
+O-100,C-001,120.00,completed,2026-02-01 09:15:00
+O-101,C-002,80.00,pending,2026-02-01 11:30:00
+O-102,C-001,55.00,completed,2026-02-02 10:00:00
+O-103,C-003,200.00,completed,2026-02-02 15:45:00
+O-104,C-002,40.00,cancelled,2026-02-03 08:20:00
+O-105,C-003,25.00,completed,2026-02-03 13:10:00

@@ -1,0 +1,64 @@
+version: 2
+
+models:
+  - name: dbt_v2_docs_orders
+    description: >
+      Order records prepared for reporting. One row represents one order. The
+      model adds order_date so the documentation can show model and column
+      lineage from the seed.
+    config:
+      static_analysis: strict
+    columns:
+      - name: order_id
+        description: Unique order identifier copied from the seed.
+        data_tests:
+          - not_null
+          - unique
+      - name: customer_id
+        description: Customer identifier copied from the seed.
+        data_tests:
+          - not_null
+      - name: order_amount
+        description: Order value copied from the seed.
+        data_tests:
+          - not_null
+      - name: order_status
+        description: Order processing status copied from the seed.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['completed', 'pending', 'cancelled']
+      - name: order_date
+        description: Calendar date created from ordered_at.
+        data_tests:
+          - not_null
+      - name: ordered_at
+        description: Original order timestamp copied from the seed.
+        data_tests:
+          - not_null
+
+  - name: dbt_v2_docs_daily_summary
+    description: >
+      Daily order summary used as the final documented resource. One row
+      represents one order date.
+    config:
+      static_analysis: strict
+    columns:
+      - name: order_date
+        description: Calendar date that defines one summary row.
+        data_tests:
+          - not_null
+          - unique
+      - name: total_orders
+        description: Number of orders placed on the date.
+        data_tests:
+          - not_null
+      - name: completed_orders
+        description: Number of completed orders on the date.
+        data_tests:
+          - not_null
+      - name: total_order_amount
+        description: Total order value recorded on the date.
+        data_tests:
+          - not_null

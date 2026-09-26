@@ -99,13 +99,13 @@ Read the [walkthrough](models/dbt_v2_static_analysis_demo/README.md) and
 
 This demo shows where each output column comes from.
 
-It follows three small data steps:
-
 ```text
 dbt_v2_cll_order_items
-        ↓
+          |
+          v
 dbt_v2_cll_enriched_order_items
-        ↓
+          |
+          v
 dbt_v2_cll_customer_order_summary
 ```
 
@@ -113,13 +113,13 @@ The first step loads sample order items from a CSV file. The second step
 calculates `line_amount` from `quantity * unit_price`. The final step adds the
 line amounts together to create `gross_revenue` for each customer.
 
-dbt can trace the full path:
-
 ```text
-quantity and unit_price
-          ↓
+quantity + unit_price
+          |
+          v
       line_amount
-          ↓
+          |
+          v
      gross_revenue
 ```
 
@@ -138,6 +138,25 @@ dbt show --info column_lineage --limit 100
 Read the [walkthrough](models/dbt_v2_column_lineage_demo/README.md) and
 [presenter guide](models/dbt_v2_column_lineage_demo/DEMO_GUIDE.md).
 
+### 4. dbt Docs v2 generation
+
+This demo explains how dbt documentation generation changed under the hood.
+
+```text
+Legacy dbt Docs: Browser loads JSON metadata
+Docs v2: Browser queries Parquet metadata with DuckDB WASM
+```
+
+```bash
+dbt build --select dbt_v2_docs_order_events+ --write-index --generate-info-schema --static-analysis strict
+dbt docs generate --no-compile --output-dir target/docs_site
+```
+
+Expected result: **1 seed, 2 models, and 20 data tests pass.**
+
+Read the [walkthrough](models/dbt_v2_docs_demo/README.md) and
+[presenter guide](models/dbt_v2_docs_demo/DEMO_GUIDE.md).
+
 ## 🧩 Repository structure
 
 ```text
@@ -153,9 +172,15 @@ AnalyticsWithSushil/
 │   │   ├── schema.yml
 │   │   ├── README.md
 │   │   └── DEMO_GUIDE.md
-│   └── dbt_v2_column_lineage_demo/
-│       ├── dbt_v2_cll_enriched_order_items.sql
-│       ├── dbt_v2_cll_customer_order_summary.sql
+│   ├── dbt_v2_column_lineage_demo/
+│   │   ├── dbt_v2_cll_enriched_order_items.sql
+│   │   ├── dbt_v2_cll_customer_order_summary.sql
+│   │   ├── schema.yml
+│   │   ├── README.md
+│   │   └── DEMO_GUIDE.md
+│   └── dbt_v2_docs_demo/
+│       ├── dbt_v2_docs_orders.sql
+│       ├── dbt_v2_docs_daily_summary.sql
 │       ├── schema.yml
 │       ├── README.md
 │       └── DEMO_GUIDE.md
@@ -164,7 +189,8 @@ AnalyticsWithSushil/
 ├── seeds/
 │   ├── on_error_continue_demo/
 │   ├── dbt_v2_static_analysis_demo/
-│   └── dbt_v2_column_lineage_demo/
+│   ├── dbt_v2_column_lineage_demo/
+│   └── dbt_v2_docs_demo/
 ├── dbt_project.yml
 ├── LICENSE.txt
 └── README.md
@@ -214,6 +240,16 @@ dbt build --select dbt_v2_cll_order_items+ --write-index --generate-info-schema 
 
 Then follow its [walkthrough](models/dbt_v2_column_lineage_demo/README.md) to inspect passthrough, rename,
 transformation, and aggregation lineage in dbt Docs v2 or from the generated Information Schema.
+
+Run the dbt Docs v2 generation demo:
+
+```bash
+dbt build --select dbt_v2_docs_order_events+ --write-index --generate-info-schema --static-analysis strict
+dbt docs generate --no-compile --output-dir target/docs_site
+```
+
+Then follow its [walkthrough](models/dbt_v2_docs_demo/README.md) to compare the legacy JSON flow with the dbt Docs v2
+Parquet and DuckDB WASM flow.
 
 ## 🤝 Contributing
 
