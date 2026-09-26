@@ -4,3 +4,5 @@ logs/
 dbt_internal_packages/
 edr_target/
 vendor_packages/
+
+DOCUMENTATION_STANDARDS.md

@@ -92,8 +92,34 @@ dbt build --select dbt_v2_static_analysis_payment_events+
 The error modes are activated with a project variable, so the committed project
 remains safe by default and can be reset without editing code.
 
-Read the [simple walkthrough](models/dbt_v2_static_analysis_demo/README.md) and
+Read the [walkthrough](models/dbt_v2_static_analysis_demo/README.md) and
 [presenter guide](models/dbt_v2_static_analysis_demo/DEMO_GUIDE.md).
+
+### 3. dbt Docs v2 generation
+
+This demo explains how dbt documentation generation changed under the hood.
+
+```text
+Legacy dbt Docs: Browser loads JSON metadata
+Docs v2: Browser queries Parquet metadata with DuckDB WASM
+```
+
+Build the sample project and generate strict metadata:
+
+```bash
+dbt build --select dbt_v2_docs_order_events+ --write-index --generate-info-schema --static-analysis strict
+```
+
+Then export the static dbt Docs v2 site:
+
+```bash
+dbt docs generate --no-compile --output-dir target/docs_site
+```
+
+Expected result: **1 seed, 2 models, and 20 data tests pass.**
+
+Read the [walkthrough](models/dbt_v2_docs_demo/README.md) and
+[presenter guide](models/dbt_v2_docs_demo/DEMO_GUIDE.md).
 
 ## 🧩 Repository structure
 
@@ -104,9 +130,15 @@ AnalyticsWithSushil/
 │   │   ├── schema.yml / groups.yml
 │   │   ├── README.md
 │   │   └── DEMO_GUIDE.md
-│   └── dbt_v2_static_analysis_demo/
-│       ├── dbt_v2_static_analysis_typed_payments.sql
-│       ├── dbt_v2_static_analysis_daily_quality.sql
+│   ├── dbt_v2_static_analysis_demo/
+│   │   ├── dbt_v2_static_analysis_typed_payments.sql
+│   │   ├── dbt_v2_static_analysis_daily_quality.sql
+│   │   ├── schema.yml
+│   │   ├── README.md
+│   │   └── DEMO_GUIDE.md
+│   └── dbt_v2_docs_demo/
+│       ├── dbt_v2_docs_orders.sql
+│       ├── dbt_v2_docs_daily_summary.sql
 │       ├── schema.yml
 │       ├── README.md
 │       └── DEMO_GUIDE.md
@@ -114,7 +146,8 @@ AnalyticsWithSushil/
 │   └── on_error_continue_demo/
 ├── seeds/
 │   ├── on_error_continue_demo/
-│   └── dbt_v2_static_analysis_demo/
+│   ├── dbt_v2_static_analysis_demo/
+│   └── dbt_v2_docs_demo/
 ├── dbt_project.yml
 ├── LICENSE.txt
 └── README.md
@@ -155,6 +188,16 @@ dbt build --select dbt_v2_static_analysis_payment_events+
 
 Then follow its [walkthrough](models/dbt_v2_static_analysis_demo/README.md) to test the missing-column and wrong-type
 failure modes. Both demos default to safe behavior.
+
+Run the dbt Docs v2 generation demo:
+
+```bash
+dbt build --select dbt_v2_docs_order_events+ --write-index --generate-info-schema --static-analysis strict
+dbt docs generate --no-compile --output-dir target/docs_site
+```
+
+Then follow its [walkthrough](models/dbt_v2_docs_demo/README.md) to compare the legacy JSON flow with the dbt Docs v2
+Parquet and DuckDB WASM flow.
 
 ## 🤝 Contributing
 
