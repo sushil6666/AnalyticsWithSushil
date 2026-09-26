@@ -268,16 +268,17 @@ guarantee that it will be merged.
 
 ## 👋 About me
 
-Hi, I am **Sushil Behera**, an analytics engineer who works at the intersection of data modeling, warehouse
-engineering, and pipeline reliability. This repo is my public workspace for turning day-to-day analytics engineering
-problems into clear, reproducible demos.
+Hi, I am **Sushil Behera**, an analytics engineer focused on building reliable,
+understandable data systems with dbt and Snowflake. This repository is my public
+workspace for turning practical analytics engineering topics into clear,
+runnable demos.
 
-I care about pipelines that fail loudly in the right places and quietly in the wrong ones. That's the thinking
-behind the `on_error_continue` demo above, and the lens I bring to most of the work here: build things that are
-transparent when they break, and honest about the tradeoffs behind every "safe" default.
+My work covers data modeling, testing, static analysis, lineage, documentation,
+metadata, error handling, and pipeline reliability. I use each demo to explain
+both how a feature works and why its design matters in a real project.
 
-If you're exploring dbt on Snowflake, thinking through alerting strategy, or just want to compare notes on analytics
-engineering practices, feel free to reach out using any of the channels below.
+If you are learning dbt v2 Stable, building on Snowflake, or comparing analytics
+engineering patterns, feel free to reach out using any of the channels below.
 
 ## 📬 Connect
 
