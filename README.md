@@ -95,7 +95,50 @@ remains safe by default and can be reset without editing code.
 Read the [walkthrough](models/dbt_v2_static_analysis_demo/README.md) and
 [presenter guide](models/dbt_v2_static_analysis_demo/DEMO_GUIDE.md).
 
-### 3. dbt Docs v2 generation
+### 3. dbt v2 Stable column-level lineage
+
+This demo shows where each output column comes from.
+
+```text
+dbt_v2_cll_order_items
+          |
+          v
+dbt_v2_cll_enriched_order_items
+          |
+          v
+dbt_v2_cll_customer_order_summary
+```
+
+The first step loads sample order items from a CSV file. The second step
+calculates `line_amount` from `quantity * unit_price`. The final step adds the
+line amounts together to create `gross_revenue` for each customer.
+
+```text
+quantity + unit_price
+          |
+          v
+      line_amount
+          |
+          v
+     gross_revenue
+```
+
+Build the demo and ask dbt to record the column connections:
+
+```bash
+dbt build --select dbt_v2_cll_order_items+ --write-index --generate-info-schema --static-analysis strict
+```
+
+Show the recorded column connections:
+
+```bash
+dbt show --info column_lineage --limit 100
+```
+
+Read the [walkthrough](models/dbt_v2_column_lineage_demo/README.md) and
+[presenter guide](models/dbt_v2_column_lineage_demo/DEMO_GUIDE.md).
+
+### 4. dbt Docs v2 generation
 
 This demo explains how dbt documentation generation changed under the hood.
 
@@ -136,6 +179,12 @@ AnalyticsWithSushil/
 │   │   ├── schema.yml
 │   │   ├── README.md
 │   │   └── DEMO_GUIDE.md
+│   ├── dbt_v2_column_lineage_demo/
+│   │   ├── dbt_v2_cll_enriched_order_items.sql
+│   │   ├── dbt_v2_cll_customer_order_summary.sql
+│   │   ├── schema.yml
+│   │   ├── README.md
+│   │   └── DEMO_GUIDE.md
 │   └── dbt_v2_docs_demo/
 │       ├── dbt_v2_docs_orders.sql
 │       ├── dbt_v2_docs_daily_summary.sql
@@ -147,6 +196,7 @@ AnalyticsWithSushil/
 ├── seeds/
 │   ├── on_error_continue_demo/
 │   ├── dbt_v2_static_analysis_demo/
+│   ├── dbt_v2_column_lineage_demo/
 │   └── dbt_v2_docs_demo/
 ├── dbt_project.yml
 ├── LICENSE.txt
@@ -187,7 +237,16 @@ dbt build --select dbt_v2_static_analysis_payment_events+
 ```
 
 Then follow its [walkthrough](models/dbt_v2_static_analysis_demo/README.md) to test the missing-column and wrong-type
-failure modes. Both demos default to safe behavior.
+failure modes. The demo defaults to safe behavior.
+
+Run the dbt v2 Stable column-level-lineage demo:
+
+```bash
+dbt build --select dbt_v2_cll_order_items+ --write-index --generate-info-schema --static-analysis strict
+```
+
+Then follow its [walkthrough](models/dbt_v2_column_lineage_demo/README.md) to inspect passthrough, rename,
+transformation, and aggregation lineage in dbt Docs v2 or from the generated Information Schema.
 
 Run the dbt Docs v2 generation demo:
 
@@ -216,7 +275,7 @@ guarantee that it will be merged.
 
 ## 👋 About me
 
-Hi, I'm **Sushil Behera**, an analytics engineer who works at the intersection of data modeling, warehouse
+Hi, I am **Sushil Behera**, an analytics engineer who works at the intersection of data modeling, warehouse
 engineering, and pipeline reliability. This repo is my public workspace for turning day-to-day analytics engineering
 problems into clear, reproducible demos.
 
@@ -250,3 +309,4 @@ This project is licensed under the [MIT License](LICENSE.txt), copyright (c) 202
 <p align="center">
   <img src="https://capsule-render.vercel.app/api?type=soft&color=0:0ea5e9,100:8b5cf6&height=90&section=footer&text=Built%20for%20insights%20and%20impact&fontSize=24" alt="footer banner" />
 </p>
+

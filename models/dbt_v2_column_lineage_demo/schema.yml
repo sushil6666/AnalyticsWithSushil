@@ -1,0 +1,84 @@
+version: 2
+
+models:
+  - name: dbt_v2_cll_enriched_order_items
+    description: >
+      One row for each order item. This model shows how dbt tracks columns that
+      keep the same value, change names, use calculations, or change data types.
+    config:
+      static_analysis: strict
+    columns:
+      - name: line_item_id
+        description: Order item ID renamed from order_item_id.
+        data_tests:
+          - not_null
+          - unique
+      - name: order_id
+        description: Order ID copied from the seed without a change.
+        data_tests:
+          - not_null
+      - name: customer_id
+        description: Customer ID copied from the seed without a change.
+        data_tests:
+          - not_null
+      - name: product_name_clean
+        description: Product name cleaned with TRIM and changed to uppercase.
+        data_tests:
+          - not_null
+      - name: quantity
+        description: Number of units copied from the seed.
+        data_tests:
+          - not_null
+      - name: unit_price
+        description: Price for one unit copied from the seed.
+        data_tests:
+          - not_null
+      - name: line_amount
+        description: Line value calculated as quantity multiplied by unit_price.
+        data_tests:
+          - not_null
+      - name: order_date
+        description: Order date created from order_timestamp.
+        data_tests:
+          - not_null
+      - name: order_timestamp
+        description: Original order timestamp copied from the seed.
+        data_tests:
+          - not_null
+
+  - name: dbt_v2_cll_customer_order_summary
+    description: >
+      One row for each customer. This model counts orders and adds order values
+      to show how dbt tracks columns through summary calculations.
+    config:
+      static_analysis: strict
+    columns:
+      - name: customer_id
+        description: Customer ID that defines one summary row.
+        data_tests:
+          - not_null
+          - unique
+      - name: total_orders
+        description: Number of different orders placed by the customer.
+        data_tests:
+          - not_null
+      - name: total_line_items
+        description: Number of order items placed by the customer.
+        data_tests:
+          - not_null
+      - name: total_units
+        description: Total number of units ordered by the customer.
+        data_tests:
+          - not_null
+      - name: gross_revenue
+        description: Total of all line_amount values for the customer.
+        data_tests:
+          - not_null
+      - name: first_order_date
+        description: Earliest order date for the customer.
+        data_tests:
+          - not_null
+      - name: last_order_date
+        description: Latest order date for the customer.
+        data_tests:
+          - not_null

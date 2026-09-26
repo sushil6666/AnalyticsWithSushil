@@ -5,4 +5,8 @@ dbt_internal_packages/
 edr_target/
 vendor_packages/
 
+<<<<<<< HEAD
+=======
+# Local documentation preferences
+>>>>>>> e9b3034ef759df25df43b75f8a3e5653689d550a
 DOCUMENTATION_STANDARDS.md

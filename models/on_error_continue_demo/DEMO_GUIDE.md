@@ -1,842 +1,335 @@
-# On-Error-Continue and Exception-Handling Demo Guide
+# On error continue presenter guide
 
 ## Purpose
 
-This demo shows how a dbt project can keep useful operational work running when
-one transformation fails, while still recording data-quality issues and routing
-them to email or Slack.
+Use this guide to show how dbt can keep useful monitoring work running when a
+model fails.
 
-The scenario is a near-real-time payment feed. Five events arrive from a payment
-gateway. Most are valid, but one amount is malformed and one is negative. The
-demo answers four operational questions:
+The demo answers four questions:
 
-1. Can safe parsing preserve the feed for investigation?
-2. Can an incident-audit model run after strict validation fails?
-3. Can dbt warn about bad data without blocking delivery?
-4. Can a separate monitoring job convert that warning into an alert?
+1. Can safe parsing preserve bad payment data for review?
+2. Can an incident audit run after strict validation fails?
+3. Can dbt record a warning without blocking normal delivery?
+4. Can a separate monitoring job turn that warning into an alert?
 
-## Mental model: payment lane and control room
+## Beginner terms
 
-Think of this demo as a payment-processing lane with an independent operations
-control room.
+1. A seed is a CSV file that dbt loads into the warehouse.
+2. A model is a SQL query that creates a table or view.
+3. A data test checks whether the data follows a rule.
+4. `on_error: continue` allows eligible downstream work to run after a failure.
+5. A warning records a problem without failing the normal delivery command.
+6. A group identifies the team that owns a dbt resource.
+
+## Demo story
+
+The seed contains five payment events. One amount is malformed and one is
+negative.
 
 ```text
-Payment events
+Payment event seed
       |
-      v
-+----------------------+        strict parsing fails
-| Validation lane      | -------------------------------+
-| Parse payment amount |                                |
-+----------------------+                                |
-      |                                                  |
-      | valid/safe output                                |
-      v                                                  v
-Validated payments                            +----------------------+
-                                              | Operations control   |
-                                              | room / incident audit|
-                                              +----------------------+
-                                                        |
-                                                        v
-                                              Counts and bad event IDs
+      +-> Payment validation
+      |
+      +-> Incident audit
+      |
+      +-> Review queue -> Warning test -> Alert
 ```
 
-The validation lane and control room have different responsibilities:
+The validation model tries to create trusted payment data. The audit and review
+queue read the original seed, so they can preserve evidence even when strict
+validation fails.
 
-- **Validation lane:** attempts to produce trusted payment data.
-- **Control room:** reports what arrived and what went wrong.
-- **`on_error: continue`:** keeps the control-room task eligible to run when the
-  validation lane fails.
+## Main resources
 
-The control room does not read the failed validator output. It reads the original
-feed independently. This is why it can still run. A child that directly queried
-the failed relation would remain technically dependent on unavailable output and
-could fail too.
+| Resource | Purpose |
+| --- | --- |
+| `on_error_continue_payment_events` | Stores the sample payment feed |
+| `on_error_continue_payment_validation` | Converts raw amounts into numbers |
+| `on_error_continue_incident_audit` | Counts malformed, negative, and declined events |
+| `on_error_continue_payment_review_queue` | Stores events that need review |
+| `on_error_continue_feed_quality` | Demonstrates safe, warning, and error policies |
+| `payment_events_requiring_review` | Warning test used for monitoring |
 
-### The six building blocks
+## Important behavior
 
-Use this mapping while presenting the demo:
-
-| Demo component | Mental-model role | Responsibility |
-|---|---|---|
-| `on_error_continue_payment_events` | Incoming payment feed | Preserves the raw gateway payload, including malformed values |
-| `on_error_continue_payment_validation` | Validation lane | Converts raw amounts into trusted numeric values |
-| `on_error_continue_incident_audit` | Operations control room | Counts malformed, negative, and declined events independently |
-| `on_error_continue_payment_review_queue` | Evidence queue | Materializes the current malformed and negative seed events independently of validation |
-| `payment_events_requiring_review` | Alarm sensor | Warns whenever the evidence queue contains one or more rows and persists those rows |
-| Monitoring job | Alarm dispatcher | Converts the selected warning into a failed job status for Slack |
-
-
-### Three separate decisions
-
-The demo separates three decisions that are often mixed together:
-
-1. **Can processing continue?**
-   `on_error: continue` answers this for downstream DAG scheduling.
-2. **Should the issue be recorded?**
-   The warning-level data test records the issue and stores evidence.
-3. **Should someone be notified?**
-   Email model notifications or the Slack monitoring job route the alert.
-
-Keeping these decisions separate lets the delivery flow remain useful without
-hiding quality problems.
-
-### Warning, evidence, and alert
-
-Treat the alerting flow as three layers:
+`on_error: continue` does not hide a failure.
 
 ```text
-Warning  ->  Evidence  ->  Alert
+Validation fails
+      |
+      +-> Command still reports the failure
+      |
+      +-> Eligible independent work can continue
 ```
 
-- **Warning:** the test reports that two events violate the payment rule.
-- **Evidence:** `PAYMENT_EVENTS_REQUIRING_REVIEW` stores the exact event rows.
-- **Alert:** email or Slack tells the owner to investigate those rows.
+A model that needs the failed relation cannot use unavailable output. The audit
+works because it reads the original seed directly.
 
-A warning by itself is only a signal in a dbt run. Persisted rows make it
-investigable, and notification routing makes it operational.
+## Step 1. Run the normal delivery flow
 
-### Delivery plane versus monitoring plane
-
-The two-job design creates two operational planes:
-
-```text
-Delivery plane                           Monitoring plane
---------------                           ----------------
-Build seed and models                    Run alert-tagged tests
-Allow warning-level issues               Promote selected warning signal
-Publish usable outputs                   Exit non-zero for Slack routing
-```
-
-The delivery job answers, “Can we still publish useful data?” The monitoring job
-answers, “Does someone need to act?”
-
-### Outcome matrix
-
-| Scenario | Validator | Incident audit | Quality test/model | Command result | Alert behavior |
-|---|---|---|---|---|---|
-| Safe delivery | Passes with safe parsing | Passes | Test warns and stores two rows | Success with warning | Email warning can fire |
-| Strict validation | Fails on `NOT_A_NUMBER` | Still passes | Not the focus of this command | Failure | Parent failure is visible |
-| Jinja warning mode | Not selected | Not selected | Model logs warning and passes | Success with warning | Developer-facing log warning |
-| Jinja error mode | Not selected | Not selected | Model stops during rendering | Failure | Blocking policy is visible |
-| Slack monitor | Already built | Already built | Warning is promoted at command level | Failure by design | Native Slack Error notification fires |
-
-### The sentence to remember
-
-> `on_error: continue` keeps independent work moving; the warning test records
-> the problem; the monitoring job turns that problem into an alert.
-
-It is also useful to remember what `on_error: continue` does **not** mean:
-
-- It does not make a failed parent successful.
-- It does not guarantee every child can run.
-- It does not suppress the error.
-- It does not send a notification by itself.
-
-It changes scheduling behavior so independently executable children can continue.
-
-## Key concepts
-
-### `on_error: continue`
-
-The `on_error: continue` model config controls how dbt schedules downstream
-nodes after a model fails. It does not convert the failed model into a success.
-The command still exits non-zero when the parent fails.
-
-A downstream model can continue only when it is independently executable. In
-this demo, the audit model has a DAG dependency on the validator but reads the
-seed directly. It therefore does not require the failed validator relation.
-
-### Jinja exceptions
-
-The demo macro uses two dbt exception methods:
-
-- `exceptions.warn()` logs a warning and allows the model to continue.
-- `exceptions.raise_compiler_error()` stops the model during Jinja rendering.
-
-Jinja warnings are useful for developer-facing messages. A warning-level data
-test is better for automated alerting because it creates a structured test
-result in dbt artifacts and can persist the failing rows.
-
-### Structured warning test
-
-The `on_error_continue_payment_review_queue` model selects current malformed and
-negative events directly from the seed. The `payment_events_requiring_review`
-test uses `warn_if_rows_exist` to warn whenever that queue contains one or more
-rows. It is configured with:
-
-- `severity: warn`
-- `warn_if: ">0"`
-- `store_failures_as: table`
-- tag `on_error_continue_alert`
-
-The delivery build therefore succeeds with a warning while the current bad rows
-are stored for investigation. Because the queue is independent from strict
-validation, the test never needs to inspect a stale validator relation.
-
-## Project structure
-
-```text
-seeds/on_error_continue_demo/
-├── on_error_continue_payment_events.csv
-└── schema.yml
-
-models/on_error_continue_demo/
-├── on_error_continue_payment_validation.sql
-├── on_error_continue_payment_review_queue.sql
-├── on_error_continue_incident_audit.sql
-├── on_error_continue_feed_quality.sql
-├── groups.yml
-├── schema.yml
-├── README.md
-└── DEMO_GUIDE.md
-
-macros/on_error_continue_demo/
-├── apply_on_error_continue_feed_policy.sql
-└── test_warn_if_rows_exist.sql
-```
-
-
-## Seed data
-
-The seed contains five payment events:
-
-| Event | Raw amount | Status | Intended behavior |
-|---|---:|---|---|
-| `EVT-1001` | `49.99` | approved | Valid payment |
-| `EVT-1002` | `125.50` | approved | Valid payment |
-| `EVT-1003` | `NOT_A_NUMBER` | approved | Malformed amount |
-| `EVT-1004` | `-25.00` | refunded | Negative amount requiring review |
-| `EVT-1005` | `75.00` | declined | Valid amount with declined status |
-
-The raw amount is loaded as `varchar`. This is intentional: if the seed cast the
-column to a numeric type, `NOT_A_NUMBER` would fail during seed loading and the
-models would never get a chance to demonstrate safe versus strict parsing.
-
-The seed is created in:
-
-```text
-DBT_HLAND.ON_ERROR_CONTINUE_DEMO_SEED.ON_ERROR_CONTINUE_PAYMENT_EVENTS
-```
-
-## DAG
-
-```text
-on_error_continue_payment_events
-              |
-              +----------------------+-------------------------+
-              |                      |                         |
-              v                      v                         v
-payment_validation          payment_review_queue       feed_quality
-              |                      |
-              v                      v
-incident_audit              payment_events_requiring_review
-                            (warning test + persisted rows)
-```
-
-The validation-to-audit edge is declared explicitly with `depends_on`. The audit
-reads the seed directly, making it eligible to run after validation fails. The
-review queue is a separate seed-derived branch, so its alert evidence is always
-based on current feed data rather than the last successful validator table.
-
-## Resource behavior
-
-
-### Payment validation
-
-`on_error_continue_payment_validation` has two modes.
-
-Safe mode is the default and uses `TRY_TO_DECIMAL`. The malformed amount becomes
-`NULL`, and all five events remain available for investigation.
-
-Strict mode is activated with:
-
-```text
-on_error_continue_demo_strict_validation: true
-```
-
-Strict mode uses `TO_DECIMAL`. Snowflake raises an error for `NOT_A_NUMBER`.
-Because the model has `on_error: continue`, dbt still schedules the independent
-incident-audit child.
-
-### Payment review queue
-
-`on_error_continue_payment_review_queue` safely parses the raw amount and keeps
-only events with a null or negative parsed amount. It is built directly from the
-seed and is not downstream of strict validation.
-
-Expected rows:
-
-| Event | Review reason |
-|---|---|
-| `EVT-1003` | `malformed_amount` |
-| `EVT-1004` | `negative_amount` |
-
-The `payment_events_requiring_review` test simply returns every row in this
-queue. Non-empty queue means warning; empty queue means pass. This keeps alert
-evidence current and prevents tests from querying a stale validator table after
-a failed replacement.
-
-
-### Incident audit
-
-`on_error_continue_incident_audit` reports:
-
-- total events
-- malformed amount events
-- negative amount events
-- declined events
-- audit timestamp
-
-Expected values are:
-
-| Metric | Expected value |
-|---|---:|
-| Total events | 5 |
-| Malformed amount events | 1 |
-| Negative amount events | 1 |
-| Declined events | 1 |
-
-### Feed quality
-
-`on_error_continue_feed_quality` reports:
-
-| Metric | Expected value |
-|---|---:|
-| Total events | 5 |
-| Malformed amount events | 1 |
-| Negative amount events | 1 |
-| Events requiring review | 2 |
-| Review rate | 0.4000 |
-
-It also accepts `on_error_continue_demo_exception_mode` with three values:
-
-- `safe`: build without a Jinja exception
-- `warn`: emit a custom warning and continue
-- `error`: raise a custom compiler error
-
-## Ownership and notifications
-
-The four models belong to the `payment_operations_demo` group.
-
-```text
-Owner: Theme Park Operations
-Email: analyticswithsushil@gmail.com
-```
-
-The group metadata documents these routes:
-
-- Email: dbt model notifications
-- Slack: dedicated monitoring job
-- Alert test tag: `on_error_continue_alert`
-
-The group configuration provides ownership metadata in the project. Email and
-Slack destinations must also be enabled in dbt Platform notification settings.
-
-## End-to-end presentation
-
-### Step 1: Load the payment feed
-
-```bash
-dbt seed --select on_error_continue_payment_events
-```
-
-Explain that the raw amount remains a string so malformed gateway payloads can
-be retained and inspected.
-
-Expected result: the seed loads five rows successfully. `dbt seed` does not run
-seed tests; the descendant tests run in Step 2.
-
-### Step 2: Run the delivery flow
+Run:
 
 ```bash
 dbt build --select on_error_continue_payment_events+
 ```
 
-Explain that safe parsing allows all models to build. The independent review
-queue finds the malformed amount and negative refund, and its structured test
-warns because the queue is non-empty.
-
 Expected result:
 
-- seed succeeds
-- four models succeed
-- normal data tests pass
-- `payment_events_requiring_review` warns
-- no model fails
-- no node is skipped
-- the overall delivery command succeeds
+```text
+5 payment events loaded
+Models and tests complete
+1 intentional warning
+0 failures
+```
 
-The validated demo result was:
+The review queue should contain:
 
 ```text
-26 passed
-1 warned
-0 failed
-0 skipped
+EVT-1003
+EVT-1004
 ```
 
+Say:
 
-### Step 3: Inspect the quality summary
+> Normal delivery keeps useful data available and records the known quality
+> problem as a warning.
 
-```sql
-SELECT
-    total_events,
-    malformed_amount_events,
-    negative_amount_events,
-    events_requiring_review,
-    review_rate,
-    policy_mode,
-    evaluated_at
-FROM DBT_HLAND.ON_ERROR_CONTINUE_DEMO.ON_ERROR_CONTINUE_FEED_QUALITY;
-```
+## Step 2. Show strict validation failure
 
-Expected review rate: `0.4000`, meaning two of five events require review.
-
-### Step 4: Inspect persisted warning rows
-
-```sql
-SELECT
-    event_id,
-    customer_id,
-    payment_amount_raw,
-    payment_amount,
-    currency,
-    payment_status,
-    event_timestamp,
-    review_reason
-FROM DBT_HLAND.DBT_TEST__AUDIT.PAYMENT_EVENTS_REQUIRING_REVIEW
-ORDER BY event_id;
-```
-
-Expected rows:
-
-- `EVT-1003`: raw amount `NOT_A_NUMBER`, parsed amount null, reason `malformed_amount`
-- `EVT-1004`: parsed amount `-25.00`, reason `negative_amount`
-
-This persisted table is a copy of the current independent review queue. It is
-recreated when the test runs, so it reflects the latest warning records and
-does not depend on the strict validator relation.
-
-
-### Step 5: Demonstrate `on_error: continue`
+Run:
 
 ```bash
-dbt build --select on_error_continue_payment_validation+ \
-  --vars '{"on_error_continue_demo_strict_validation": true}'
+dbt build --select on_error_continue_payment_validation+ --vars '{"on_error_continue_demo_strict_validation": true}'
 ```
 
-Expected result:
+Expected behavior:
 
-- validation fails on `NOT_A_NUMBER`
-- the overall command exits non-zero
-- the incident audit still runs
-- the audit's tests run
-- zero nodes are skipped because of the validator failure
+1. Payment validation fails on the malformed amount.
+2. The command reports the failure.
+3. The incident audit still runs.
+4. The audit reads the seed instead of the failed validation table.
 
-Validated result:
+Say:
 
-```text
-8 passed
-1 expected failure
-0 skipped
-```
+> Continue does not mean ignore the error. The failure stays visible, but the
+> independent incident audit can still collect useful evidence.
 
-Presentation message:
+## Step 3. Show a Jinja warning
 
-> The primary payment transformation failed, but dbt still produced the
-> independent incident report. Operations retains visibility into the feed while
-> engineering investigates the failed validator.
-
-### Step 6: Demonstrate a Jinja warning
+Run:
 
 ```bash
-dbt build --select on_error_continue_feed_quality \
-  --vars '{"on_error_continue_demo_exception_mode": "warn"}'
+dbt build --select on_error_continue_feed_quality --vars '{"on_error_continue_demo_exception_mode": "warn"}'
 ```
 
-Expected warning:
+Expected behavior:
 
-```text
-On-error-continue payment feed alert: malformed or negative amounts were
-detected; the quality model will continue.
-```
+1. dbt writes a warning to the logs.
+2. The model still builds.
+3. Its tests still run.
 
-The model and its tests continue to run. This demonstrates a developer-facing
-warning emitted during Jinja rendering.
+Say:
 
-### Step 7: Demonstrate a blocking compiler exception
+> A warning tells the team about a problem without stopping this model.
+
+## Step 4. Show a blocking Jinja error
+
+Run:
 
 ```bash
-dbt build --select on_error_continue_feed_quality \
-  --vars '{"on_error_continue_demo_exception_mode": "error"}'
+dbt build --select on_error_continue_feed_quality --vars '{"on_error_continue_demo_exception_mode": "error"}'
 ```
 
-Expected error:
+Expected behavior:
 
-```text
-On-error-continue payment feed rejected: quality policy is set to error.
-```
+1. dbt raises a compiler error.
+2. The model does not run.
+3. Tests that require the model are skipped.
 
-The model stops during rendering. Snowflake does not execute its model SQL, and
-attached tests are skipped because there is no newly built model to test.
+Say:
 
-### Step 8: Run the Slack monitoring command
+> Error mode is for a condition that must stop execution.
 
-```bash
-dbt test --select tag:on_error_continue_alert \
-  --warn-error-options '{"error":["RunResultWarningMessage"]}'
-```
+## Step 5. Return to safe mode
 
-The test remains semantically classified as a warning, but dbt exits non-zero
-because `RunResultWarningMessage` is promoted to an error at command level. This
-is the signal used by native Slack job-error notifications.
-
-This command was validated successfully as an alert simulation: the command
-failed as intended and the persisted warning rows remained queryable.
-
-### Step 9: Restore the safe model state
+Run:
 
 ```bash
 dbt build --select on_error_continue_payment_events+
 ```
 
-The models return to their default safe modes. The structured test continues to
-warn until the intentionally bad seed rows are removed; that warning is expected
-for this demo.
+The project variables default to safe values, so no code edit is required.
 
-## Recommended deployment jobs
+## Step 6. Show the warning evidence
 
-No deployment jobs currently exist for this project. Create two jobs in dbt
-Platform.
+The warning test is attached to the review queue. It warns when one or more rows
+need attention and stores those rows for investigation.
+
+Run:
+
+```bash
+dbt test --select tag:on_error_continue_alert
+```
+
+The normal test command returns a warning. It does not fail delivery.
+
+This gives the team:
+
+1. A warning result in dbt.
+2. A count of affected rows.
+3. Stored evidence with event IDs.
+4. A tag for selecting the alert test.
+5. A resource owner through the dbt group.
+
+## Step 7. Explain delivery and monitoring jobs
+
+Use separate jobs so delivery and alerting have different responsibilities.
 
 ### Delivery job
 
-Suggested name: `On Error Continue Demo - Delivery`
-
 ```bash
 dbt build --select on_error_continue_payment_events+
 ```
 
 Purpose:
 
-- load and transform the feed
-- allow warning-level quality issues
-- preserve bad rows for investigation
-- avoid blocking delivery for this warning threshold
+1. Load and transform the feed.
+2. Preserve bad rows for review.
+3. Record warning-level quality issues.
+4. Keep delivery successful for this warning threshold.
 
 ### Monitoring job
 
-Suggested name: `On Error Continue Demo - Alert Monitor`
-
 ```bash
-dbt test --select tag:on_error_continue_alert \
-  --warn-error-options '{"error":["RunResultWarningMessage"]}'
+dbt test --select tag:on_error_continue_alert --warn-error-options '{"error":["RunResultWarningMessage"]}'
 ```
 
 Purpose:
 
-- run only alert-tagged tests
-- convert their warning result into a non-zero job status
-- trigger native Slack job-error notifications
-- remain operationally separate from delivery
+1. Run only the alert-tagged test.
+2. Convert its warning into a failed monitoring job.
+3. Trigger the job error notification configured in dbt Platform.
 
-Schedule the monitoring job after the delivery job or trigger both from the same
-external orchestrator in sequence.
+Say:
 
-## Configure and verify email notifications
+> Delivery records the warning. Monitoring promotes only the selected warning so
+> the alert channel receives a clear signal.
 
-This demo uses native dbt **model notifications**. No alert package or custom
-email macro is required. Model-owner emails are emitted only by jobs running in
-deployment environments; interactive Studio commands do not send them.
+## Step 8. Explain ownership and notifications
 
-### 1. Define the owner group in project code
+The review queue belongs to the `payment_operations_demo` group. The group owner
+identifies the team responsible for the issue.
 
-`models/on_error_continue_demo/groups.yml` defines the recipient:
+For email model notifications:
 
-```yaml
-groups:
-  - name: payment_operations_demo
-    owner:
-      name: Theme Park Operations
-      email: analyticswithsushil@gmail.com
-```
+1. Run the command in a dbt Platform deployment environment.
+2. Confirm the deployed branch contains the demo.
+3. Enable group and owner model notifications.
+4. Enable test warning and failure statuses as needed.
+5. Use a team-owned email address in `groups.yml`.
 
-The values under `config.meta` are documentation metadata only. They do not
-provision or send notifications.
+For Slack job notifications:
 
-### 2. Attach the group to the alert-owning model
+1. Create the monitoring job.
+2. Connect the required Slack channel in dbt Platform.
+3. Select the deployment environment and monitoring job.
+4. Enable job error notifications.
 
-`models/on_error_continue_demo/schema.yml` assigns the review queue to the group
-and attaches the warning test:
+Interactive Studio commands do not send deployment model-owner notifications.
 
-```yaml
-models:
-  - name: on_error_continue_payment_review_queue
-    config:
-      group: payment_operations_demo
-    data_tests:
-      - warn_if_rows_exist:
-          name: payment_events_requiring_review
-          config:
-            severity: warn
-            warn_if: ">0"
-            store_failures_as: table
-            tags: ["on_error_continue_alert"]
-```
+## Three separate decisions
 
-Tests inherit the group of their attached model, so the notification route is:
+The demo separates three questions:
 
-```text
-payment_events_requiring_review
-    -> on_error_continue_payment_review_queue
-    -> payment_operations_demo
-    -> analyticswithsushil@gmail.com
-```
+| Question | Demo feature |
+| --- | --- |
+| Can eligible work continue? | `on_error: continue` |
+| Should the issue be recorded? | Warning test and stored evidence |
+| Should someone be notified? | Email or Slack configuration |
 
-### 3. Deploy the code to the job's Git branch
+This separation keeps the failure visible while preserving useful evidence.
 
-Commit and push the demo before testing notifications. The validated deployment
-run used branch `feat/on-error-continue-alerting`. The scheduled job must use a
-branch containing these files; merge that branch to `main` before relying on a
-`main`-based schedule.
+## Why this demo matters
 
-A job running an older commit logs `NoNodesForSelectionCriteria`, performs no
-model or test work, and sends no model-owner warning.
+1. Incident evidence can survive a transformation failure.
+2. Delivery warnings do not need to become delivery failures.
+3. Selected warnings can still create alerts through a monitoring job.
+4. Resource ownership gives each alert a responsible team.
+5. Safe parsing and strict validation can support different operational needs.
 
-### 4. Configure the deployment environment and job
+## Important limits
 
-Validated configuration:
+1. `on_error: continue` does not change a failed model into a success.
+2. It does not make the failed relation available.
+3. A child that queries unavailable output may still fail.
+4. A Jinja warning is only a log message unless a test or job records status.
+5. Notifications require the correct deployment environment and account setup.
 
-| Setting | Value |
-|---|---|
-| Environment | `stg_env` |
-| Engine | dbt v2 Stable |
-| Job | `alert_test` |
-| Job command | `dbt build --select on_error_continue_payment_events+` |
+## Ten minute presentation order
 
-The environment must use a dbt release track. The delivery command succeeds with
-one warning, which is intentional: model notifications respond to the warning
-node even though the overall job succeeds.
-
-### 5. Enable model notifications at the account level
-
-A dbt Account Admin must make model notifications available to account members.
-If **Enable group/owner notifications on models** is missing from Notification
-settings, ask an Account Admin to enable access to the feature.
-
-### 6. Configure email notification statuses
-
-For the user configuring notifications:
-
-1. Select the profile icon in the lower-left dbt Platform sidebar.
-2. Open **Notification settings**.
-3. Select **Email notifications**.
-4. Under **Model notifications**, enable
-   **Enable group/owner notifications on models**.
-5. Choose the model and test statuses to receive.
-6. Click **Save**.
-
-Configuration used when three emails were observed:
-
-| Resource | Status | Enabled |
-|---|---|---|
-| Models | Success | Yes |
-| Tests | Warning | Yes |
-
-That configuration produced:
-
-1. `dbt: Model completed successfully on job "alert_test" from environment "stg_env"`
-2. `dbt: Test warning on job "alert_test" from environment "stg_env"`
-3. `dbt: Summary of model and test executions on job "alert_test" from environment "stg_env"`
-
-The first email was generated by model **Success**, the second by test
-**Warning**, and the third was the consolidated end-of-run summary. The run
-artifact contained 27 unique dbt results, 5 successful resources, 21 passing
-tests, and 1 warning, with no duplicate unique IDs. Repeated model names in the
-summary email do not indicate duplicate dbt execution.
-
-### 7. Recommended low-noise email settings
-
-For actionable quality alerts, use:
-
-| Resource | Status | Recommended setting |
-|---|---|---|
-| Models | Success | Off |
-| Models | Fails | On |
-| Tests | Success | Off |
-| Tests | Warning | On |
-| Tests | Fails | On |
-
-This removes the routine model-success email. dbt can still send the immediate
-test-warning email followed by the consolidated end-of-run summary.
-
-### 8. Verify the complete email path
-
-1. Confirm the job branch contains the demo.
-2. Trigger `alert_test` in `stg_env`.
-3. Confirm `payment_events_requiring_review` has status `warn`.
-4. Confirm the deployed review-queue model has group
-   `payment_operations_demo`.
-5. Check `analyticswithsushil@gmail.com`, including spam or filtered folders.
-6. If no email arrives, recheck the account-level feature access, the profile's
-   saved status subscriptions, and the deployment environment's release track.
-
-
-## Configure Slack notifications
-
-1. Create the monitoring job described above.
-2. Open **Profile > Notification settings > Slack notifications**.
-3. Select the Slack channel.
-4. Select the deployment environment.
-5. Find `On Error Continue Demo - Alert Monitor`.
-6. Enable notifications for **Error**.
-7. Save the settings.
-
-The monitoring command exits non-zero when the alert test warns, so the job's
-Error notification sends the Slack alert. The separate delivery job can still
-complete successfully.
-
-## Why two jobs are recommended
-
-Promoting warnings to errors inside the delivery job would make delivery fail.
-Separating delivery and monitoring gives each job one responsibility:
-
-- delivery publishes usable data and records warnings
-- monitoring converts selected warnings into alertable job failures
-
-This avoids promoting unrelated dbt warnings, deprecations, or static-analysis
-messages into production failures. The monitoring command promotes only
-`RunResultWarningMessage` and selects only `on_error_continue_alert` tests.
-
-## Tracking and investigation
-
-Warning history is available through:
-
-- dbt Platform job run history
-- `run_results.json`
-- the persisted `PAYMENT_EVENTS_REQUIRING_REVIEW` table
-
-For an incident, start with the persisted table to identify affected event IDs,
-then use the job run to review the warning count and execution context.
-
-## Common questions
-
-### Why does the strict demo command still fail?
-
-`on_error: continue` does not suppress the parent failure. It allows eligible
-children to continue. A non-zero command status remains important because it
-accurately reports that validation failed.
-
-### Why does the audit not select from the validator?
-
-A child that queries a failed relation is not truly independent. The audit reads
-the seed directly so it can run even when strict validation cannot create its
-table.
-
-### Why use a data test as well as `exceptions.warn()`?
-
-The Jinja warning is a log message. The data test provides a warning-status node,
-a failure count, artifact history, ownership, tags, and persisted offending
-rows. Those features make the test suitable for automated alerting.
-
-### Why is the malformed amount stored as text?
-
-Keeping the raw payload as text reflects how ingestion systems commonly land
-API events. Parsing belongs in the transformation layer, where safe and strict
-policies can be demonstrated explicitly.
-
-### Does a warning-level test make the delivery job fail?
-
-No. With its normal configuration, the delivery command succeeds with a warning.
-The dedicated monitoring command intentionally promotes that warning to a
-non-zero status for Slack routing.
-
-### What happens when the source data is fixed?
-
-When no rows violate the expression, the test passes. The monitoring job exits
-successfully and no Slack error notification is sent.
+1. Define seed, model, test, warning, and `on_error: continue`.
+2. Show the payment resource flow.
+3. Run the normal delivery command.
+4. Show the review queue and intentional warning.
+5. Run the strict validation example.
+6. Point out that the audit still runs.
+7. Show Jinja warning and error modes.
+8. Explain the delivery and monitoring jobs.
+9. Explain ownership and notifications.
+10. Return to safe mode.
 
 ## Troubleshooting
 
 ### Nothing is selected
 
-Confirm the exact selectors:
+Run:
 
 ```bash
 dbt ls --select on_error_continue_payment_events+
 dbt ls --select tag:on_error_continue_alert
 ```
 
-### The models cannot find the seed
+### The seed is missing
 
-Reload it:
+Run:
 
 ```bash
 dbt seed --select on_error_continue_payment_events --full-refresh
 ```
 
-### The warning table is missing
+### The warning evidence is missing
 
-Rebuild the review queue with its seed ancestor and attached warning test:
+Run:
 
 ```bash
 dbt build --select +on_error_continue_payment_review_queue
 ```
 
-The command should succeed with one warning and recreate the persisted evidence
-table. Then query:
+Confirm the review queue contains `EVT-1003` and `EVT-1004`.
 
-```sql
-SELECT *
-FROM DBT_HLAND.DBT_TEST__AUDIT.PAYMENT_EVENTS_REQUIRING_REVIEW
-ORDER BY event_id;
-```
+### Strict mode still returns a failed command
 
+This is expected. `on_error: continue` allows eligible work to continue but does
+not suppress the validation failure.
 
 ### Slack does not receive an alert
 
-Check that:
-
-- the dedicated monitoring job exists
-- its command includes `RunResultWarningMessage`
-- the job exits non-zero
-- Slack is connected to dbt Platform
-- the correct environment and channel are selected
-- Error notifications are enabled for the monitoring job
+1. Confirm the monitoring job uses the documented command.
+2. Confirm the job returns a failed status.
+3. Confirm Slack is connected to dbt Platform.
+4. Confirm job error notifications are enabled.
 
 ### Email does not arrive
 
-Check that:
+1. Confirm model notifications are enabled for the account.
+2. Confirm test warning notifications are selected.
+3. Confirm the job runs in a deployment environment.
+4. Confirm the review queue belongs to `payment_operations_demo`.
+5. Confirm the owner email in `groups.yml` is valid.
 
-- model notifications are enabled for the account
-- Warning notifications are enabled for tests
-- the deployment environment is selected
-- `analyticswithsushil@gmail.com` is an allowed notification recipient
-- the model remains assigned to `payment_operations_demo`
+## Final message
 
-## Final validation record
-
-The implementation has been validated on dbt v2 Stable 2.0.5:
-
-- fresh parsing and both documented `dbt ls` selectors succeeded
-- normal and full-refresh seed loading each succeeded with five rows
-- safe delivery completed with 26 passed, 1 warned, 0 failed, and 0 skipped
-- the independent review queue contained `EVT-1003` and `EVT-1004`
-- the persisted warning table contained the same two current evidence rows
-- strict validation completed with 8 passed, 1 expected failure, and 0 skipped
-- the independent incident audit and its tests continued successfully
-- Jinja warning mode emitted `dbt1071`; the model and five tests passed
-- Jinja error mode stopped rendering; one model failed and five tests skipped
-- the normal named warning test succeeded with one warning
-- the dedicated monitoring command retained warning test status and exited non-zero
-
-## Checklist
-
-Before presenting:
-
-1. Run the safe delivery command.
-2. Confirm the review queue and persisted table contain `EVT-1003` and `EVT-1004`.
-3. Confirm the Slack monitoring job uses the exact documented command.
-4. Confirm email Warning notifications are enabled.
-5. Confirm Slack Error notifications are enabled for the monitoring job.
-6. Keep this guide open for the expected outputs and talking points.
+> A failure should remain visible, but it should not block independent monitoring
+> from collecting evidence. This demo separates processing, evidence, and
+> notification so each part has one clear responsibility.
