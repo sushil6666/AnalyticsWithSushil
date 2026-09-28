@@ -1,0 +1,36 @@
+version: 2
+
+models:
+  - name: dbt_v2_lint_orders
+    description: >
+      Clean order records used to demonstrate the native dbt v2 Stable SQL
+      linter. One row represents one order.
+    columns:
+      - name: order_id
+        description: Unique identifier for an order.
+        data_tests:
+          - not_null
+          - unique
+      - name: customer_id
+        description: Customer who placed the order.
+        data_tests:
+          - not_null
+      - name: order_amount
+        description: Total value of the order.
+        data_tests:
+          - not_null
+      - name: order_status
+        description: Current processing status of the order.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['completed', 'pending', 'cancelled']
+      - name: order_date
+        description: Calendar date created from ordered_at.
+        data_tests:
+          - not_null
+      - name: is_completed
+        description: True when the order status is completed.
+        data_tests:
+          - not_null
