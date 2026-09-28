@@ -1,0 +1,42 @@
+version: 2
+
+seeds:
+  - name: dbt_v2_lint_order_events
+    description: >
+      Four sample order events used by the dbt v2 Stable SQL lint demo. One row
+      represents one order.
+    config:
+      schema: dbt_v2_sql_lint_demo_seed
+      quote_columns: false
+      column_types:
+        order_id: varchar
+        customer_id: varchar
+        order_amount: number(12, 2)
+        order_status: varchar
+        ordered_at: timestamp_ntz
+      tags: ['dbt_v2_sql_lint_demo']
+    columns:
+      - name: order_id
+        description: Unique identifier for an order.
+        data_tests:
+          - not_null
+          - unique
+      - name: customer_id
+        description: Customer who placed the order.
+        data_tests:
+          - not_null
+      - name: order_amount
+        description: Total value of the order.
+        data_tests:
+          - not_null
+      - name: order_status
+        description: Current processing status of the order.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['completed', 'pending', 'cancelled']
+      - name: ordered_at
+        description: Timestamp when the order was placed.
+        data_tests:
+          - not_null
