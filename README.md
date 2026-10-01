@@ -174,24 +174,43 @@ Expected build result: **1 seed, 1 model, and 15 data tests pass.**
 Read the [walkthrough](models/dbt_v2_sql_lint_demo/README.md) and
 [presenter guide](models/dbt_v2_sql_lint_demo/DEMO_GUIDE.md).
 
+### 6. dbt State reuse and compute avoidance
+
+This demo shows how two identical managed builds can produce different execution
+plans.
+
+```bash
+dbt build --select dbt_state_order_events+ --manage-state
+```
+
+The first run executed 29 selected resources in 38.06 seconds. The second run
+reused all 29 resources in 16.07 seconds, an observed elapsed reduction of
+57.8%.
+
+It also explains model-level `lag_tolerance`, reuse, skip execution, clone, and
+deferral.
+
+Read the [walkthrough](models/dbt_state_demo/README.md) and
+[presenter guide](models/dbt_state_demo/DEMO_GUIDE.md).
+
 ## 🧩 Repository structure
 
 ```text
 AnalyticsWithSushil/
 ├── models/
 │   ├── on_error_continue_demo/
-│   │   ├── schema.yml / groups.yml
-│   │   ├── README.md
-│   │   └── DEMO_GUIDE.md
 │   ├── dbt_v2_static_analysis_demo/
 │   ├── dbt_v2_column_lineage_demo/
 │   ├── dbt_v2_docs_demo/
-│   └── dbt_v2_sql_lint_demo/
-│       ├── .sqlfluff
-│       ├── dbt_v2_lint_orders.sql
+│   ├── dbt_v2_sql_lint_demo/
+│   └── dbt_state_demo/
+│       ├── dbt_state_stg_orders.sql
+│       ├── dbt_state_daily_orders.sql
+│       ├── dbt_state_kpi_summary.sql
 │       ├── schema.yml
 │       ├── README.md
-│       └── DEMO_GUIDE.md
+│       ├── DEMO_GUIDE.md
+│       └── RUN_EVIDENCE.md
 ├── macros/
 │   └── on_error_continue_demo/
 ├── seeds/
@@ -199,7 +218,8 @@ AnalyticsWithSushil/
 │   ├── dbt_v2_static_analysis_demo/
 │   ├── dbt_v2_column_lineage_demo/
 │   ├── dbt_v2_docs_demo/
-│   └── dbt_v2_sql_lint_demo/
+│   ├── dbt_v2_sql_lint_demo/
+│   └── dbt_state_demo/
 ├── .sqlfluff
 ├── dbt_project.yml
 ├── LICENSE.txt
@@ -270,6 +290,16 @@ dbt lint models/dbt_v2_sql_lint_demo/dbt_v2_lint_orders.sql --config models/dbt_
 
 Then follow its [walkthrough](models/dbt_v2_sql_lint_demo/README.md) to introduce, detect, and safely fix a lint
 violation.
+
+Run the dbt State demo twice:
+
+```bash
+dbt build --select dbt_state_order_events+ --manage-state
+dbt build --select dbt_state_order_events+ --manage-state
+```
+
+Then follow its [walkthrough](models/dbt_state_demo/README.md) to compare the first build with the second managed run
+and understand why resources were reused.
 
 ## 🤝 Contributing
 

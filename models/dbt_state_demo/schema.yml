@@ -1,0 +1,85 @@
+version: 2
+
+models:
+  - name: dbt_state_stg_orders
+    description: >
+      Prepared order records with a 15-minute lag tolerance. One row represents
+      one order.
+    columns:
+      - name: order_id
+        description: Unique identifier for an order.
+        data_tests:
+          - not_null
+          - unique
+      - name: customer_id
+        description: Customer who placed the order.
+        data_tests:
+          - not_null
+      - name: order_amount
+        description: Total value of the order.
+        data_tests:
+          - not_null
+      - name: order_status
+        description: Current processing status of the order.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['completed', 'pending', 'cancelled']
+      - name: order_date
+        description: Calendar date derived from ordered_at.
+        data_tests:
+          - not_null
+      - name: is_completed
+        description: True when the order status is completed.
+        data_tests:
+          - not_null
+
+  - name: dbt_state_daily_orders
+    description: >
+      Daily order totals with a four-hour lag tolerance. One row represents one
+      order date.
+    columns:
+      - name: order_date
+        description: Calendar date that defines one summary row.
+        data_tests:
+          - not_null
+          - unique
+      - name: total_orders
+        description: Number of orders placed on the date.
+        data_tests:
+          - not_null
+      - name: completed_orders
+        description: Number of completed orders on the date.
+        data_tests:
+          - not_null
+      - name: total_order_amount
+        description: Total value of orders placed on the date.
+        data_tests:
+          - not_null
+
+  - name: dbt_state_kpi_summary
+    description: >
+      Overall order KPIs with a 24-hour lag tolerance. The model returns one
+      summary row.
+    columns:
+      - name: total_reporting_days
+        description: Number of dates represented by the daily model.
+        data_tests:
+          - not_null
+      - name: total_orders
+        description: Total number of orders across all dates.
+        data_tests:
+          - not_null
+      - name: completed_orders
+        description: Total number of completed orders.
+        data_tests:
+          - not_null
+      - name: gross_order_amount
+        description: Total value of all orders.
+        data_tests:
+          - not_null
+      - name: completion_rate
+        description: Completed orders divided by total orders.
+        data_tests:
+          - not_null
