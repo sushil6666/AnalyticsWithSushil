@@ -1,0 +1,7 @@
+order_id,customer_id,order_amount,order_status,ordered_at
+ST-100,C-201,125.00,completed,2026-04-01 09:00:00
+ST-101,C-202,75.50,pending,2026-04-01 11:30:00
+ST-102,C-201,40.00,cancelled,2026-04-01 14:15:00
+ST-103,C-203,210.00,completed,2026-04-02 08:45:00
+ST-104,C-204,95.00,completed,2026-04-02 12:00:00
+ST-105,C-202,60.00,pending,2026-04-02 16:30:00
