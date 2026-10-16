@@ -40,7 +40,7 @@ models:
       demonstrates that the dependency slice does not begin executing when
       static analysis proves an upstream query invalid. The default-off compare
       mode applies a controlled 10 percent uplift to total_payment_amount for
-      development versus production comparison.
+      development versus deployed staging comparison.
     config:
       static_analysis: strict
     columns:

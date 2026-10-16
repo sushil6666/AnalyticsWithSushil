@@ -193,6 +193,23 @@ deferral.
 Read the [walkthrough](models/dbt_state_demo/README.md) and
 [presenter guide](models/dbt_state_demo/DEMO_GUIDE.md).
 
+### 7. dbt Compare development with staging
+
+This demo shows why a passing build does not prove that development data matches
+the deployed staging baseline.
+
+```bash
+dbt build --select +dbt_v2_static_analysis_daily_quality+ --defer --vars '{"dbt_compare_demo_mode":"ten_percent_uplift"}'
+dbt compare --select dbt_v2_static_analysis_daily_quality+ --defer --vars '{"dbt_compare_demo_mode":"ten_percent_uplift"}'
+```
+
+The build passed every test. Compare then confirmed that three payment totals
+increased by exactly 10 percent while schema, grain, rows, and event counts stayed
+unchanged.
+
+Read the [walkthrough](models/dbt_compare_demo/README.md) and
+[presenter guide](models/dbt_compare_demo/DEMO_GUIDE.md).
+
 ## 🧩 Repository structure
 
 ```text
@@ -203,11 +220,8 @@ AnalyticsWithSushil/
 │   ├── dbt_v2_column_lineage_demo/
 │   ├── dbt_v2_docs_demo/
 │   ├── dbt_v2_sql_lint_demo/
-│   └── dbt_state_demo/
-│       ├── dbt_state_stg_orders.sql
-│       ├── dbt_state_daily_orders.sql
-│       ├── dbt_state_kpi_summary.sql
-│       ├── schema.yml
+│   ├── dbt_state_demo/
+│   └── dbt_compare_demo/
 │       ├── README.md
 │       ├── DEMO_GUIDE.md
 │       └── RUN_EVIDENCE.md
@@ -300,6 +314,17 @@ dbt build --select dbt_state_order_events+ --manage-state
 
 Then follow its [walkthrough](models/dbt_state_demo/README.md) to compare the first build with the second managed run
 and understand why resources were reused.
+
+Run the dbt Compare demo in CI with staging configured as the deferring
+environment:
+
+```bash
+dbt build --select +dbt_v2_static_analysis_daily_quality+ --defer --vars '{"dbt_compare_demo_mode":"ten_percent_uplift"}'
+dbt compare --select dbt_v2_static_analysis_daily_quality+ --defer --vars '{"dbt_compare_demo_mode":"ten_percent_uplift"}'
+```
+
+Then follow its [walkthrough](models/dbt_compare_demo/README.md) to review the
+validated development versus staging value differences.
 
 ## 🤝 Contributing
 
