@@ -1,0 +1,32 @@
+version: 2
+
+seeds:
+  - name: dbt_v2_batch_order_events
+    description: >
+      Six synthetic orders used only by the dbt v2 Stable batch-testing demo.
+      One row represents one order with a distinct payment reference. Tests live
+      on the model so the comparison isolates batching on one relation.
+    config:
+      schema: dbt_v2_batch_tests_demo_seed
+      quote_columns: false
+      column_types:
+        order_id: varchar
+        payment_id: varchar
+        customer_id: varchar
+        order_amount: number(12, 2)
+        order_status: varchar
+        ordered_at: timestamp_ntz
+      tags: ['dbt_v2_batch_tests_demo']
+    columns:
+      - name: order_id
+        description: Synthetic order identifier; unique in the clean fixture.
+      - name: payment_id
+        description: Synthetic payment reference; unique in the clean fixture.
+      - name: customer_id
+        description: Synthetic customer identifier; repeat customers are intentional.
+      - name: order_amount
+        description: Order value in demo currency units.
+      - name: order_status
+        description: Completed, pending, or cancelled order status.
+      - name: ordered_at
+        description: Timestamp when the synthetic order was placed.

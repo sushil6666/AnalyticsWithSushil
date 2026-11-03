@@ -1,0 +1,47 @@
+version: 2
+
+models:
+  - name: dbt_v2_batch_orders
+    description: >
+      One row per synthetic order used to demonstrate dbt v2 Stable batch tests.
+      Safe mode preserves all six seed rows. Opt-in null_customer and
+      duplicate_payment modes deliberately fail one test to demonstrate that
+      batching retains column-level test results. Restore safe mode after a demo.
+    columns:
+      - name: order_id
+        description: Unique order identifier; unchanged in every demo mode.
+        data_tests:
+          - not_null
+          - unique
+      - name: payment_id
+        description: >
+          Unique payment reference in safe mode. Duplicate-payment mode changes
+          O-1002 to P-1001, duplicating O-1001's payment reference.
+        data_tests:
+          - not_null
+          - unique
+      - name: customer_id
+        description: >
+          Customer placing the order. Null-customer mode clears this value only
+          for O-1002; repeated non-null customer IDs are valid.
+        data_tests:
+          - not_null
+      - name: order_amount
+        description: Order value in demo currency units, unchanged in every mode.
+        data_tests:
+          - not_null
+          - not_null:
+              name: dbt_v2_batch_completed_amount_not_null
+              config:
+                where: "order_status = 'completed'"
+      - name: order_status
+        description: Order status; accepted-values tests run outside the batches.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['completed', 'pending', 'cancelled']
+      - name: ordered_at
+        description: Order timestamp, unchanged in every demo mode.
+        data_tests:
+          - not_null

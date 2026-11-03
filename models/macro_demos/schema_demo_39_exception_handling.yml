@@ -1,0 +1,36 @@
+version: 2
+
+# Set demo_39_exception_mode to safe (default), warn, or error. The warning mode
+# builds successfully with a Jinja warning; error mode intentionally fails with
+# a clear compiler exception.
+
+models:
+  - name: demo_39_exception_handling
+    description: >
+      Runnable demonstration of dbt's exceptions namespace. Use
+      `demo_39_exception_mode` to select safe, warn, or error behavior without
+      leaving an intentionally failing model in normal project builds.
+    config:
+      enabled: true
+      materialized: view
+      tags: ['macro_demo', 'demo_39', 'exceptions']
+    columns:
+      - name: scenario_id
+        description: Static identifier for the demo row.
+        data_type: number
+        data_tests:
+          - not_null
+          - unique
+      - name: scenario_name
+        description: Short name for the exception-handling scenario.
+        data_type: varchar
+        data_tests:
+          - not_null
+      - name: demo_status
+        description: Selected exception mode—safe, warn, or error.
+        data_type: varchar
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['safe', 'warn', 'error']
