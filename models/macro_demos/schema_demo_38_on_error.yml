@@ -1,0 +1,48 @@
+version: 2
+
+# Demo commands:
+#   Safe build:
+#     dbt build --select demo_38_on_error_continue_upstream+
+#
+#   Intentional upstream failure with downstream continuation:
+#     dbt build --select demo_38_on_error_continue_upstream+ --vars '{"demo_38_force_failure": true}'
+#
+# The second command is expected to finish non-zero because the upstream model
+# fails. The downstream model should still pass because the upstream model uses
+# on_error: continue and the child does not query the failed relation.
+
+models:
+  - name: demo_38_on_error_continue_upstream
+    description: >
+      Runnable dbt v2 Stable demonstration of `on_error: continue`. It builds
+      successfully by default. Set `demo_38_force_failure: true` to trigger a
+      division-by-zero error and verify that its independent child still runs.
+    config:
+      enabled: true
+      materialized: table
+      on_error: continue
+      tags: ['macro_demo', 'demo_38', 'on_error', 'continue']
+    columns:
+      - name: customer_id
+        description: Customer identifier from `dim_customers`.
+        data_type: varchar
+      - name: force_failure
+        description: One in safe mode; an intentional division-by-zero expression in failure mode.
+        data_type: number
+
+  - name: demo_38_on_error_continue_downstream
+    description: >
+      Independent child that runs after the Demo 38 upstream model fails. Its
+      explicit DAG dependency proves continuation behavior, while reading
+      `dim_customers` directly avoids relying on the failed relation.
+    config:
+      enabled: true
+      materialized: table
+      tags: ['macro_demo', 'demo_38', 'on_error', 'continue']
+    columns:
+      - name: customer_count
+        description: Row count of `dim_customers`, proving that the child executed.
+        data_type: number
+      - name: demo_ran_at
+        description: Timestamp written when the downstream demo executes.
+        data_type: timestamp_ntz

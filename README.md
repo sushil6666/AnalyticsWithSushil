@@ -210,6 +210,34 @@ unchanged.
 Read the [walkthrough](models/dbt_compare_demo/README.md) and
 [presenter guide](models/dbt_compare_demo/DEMO_GUIDE.md).
 
+### 8. dbt v2 Stable batch testing
+
+This demo shows how `--batch-tests` combines compatible `not_null` and `unique`
+tests on the same model while preserving each test's pass or fail result.
+
+Build the clean fixture, then compare test execution:
+
+```bash
+dbt build --select +dbt_v2_batch_orders+ --batch-tests --no-manage-state
+dbt test --select dbt_v2_batch_orders --no-manage-state
+dbt test --select dbt_v2_batch_orders --no-manage-state --batch-tests
+```
+
+Expected clean result: **1 seed, 1 model, and 10 passing data tests.** The
+measured test-query count drops from **10 to 4**, a **60% reduction**, while a
+filtered null check and an accepted-values check run separately. The baseline
+assumes batching is not enabled by the environment; state reuse is disabled in
+both test commands.
+
+Opt-in null-customer and duplicate-payment modes show that the specific failing
+test remains visible. The demo defaults to safe mode and includes a reset step.
+Measured command times were 4.82 seconds and 4.40 seconds in one development
+run pair; this tiny fixture is not a speed or cost benchmark.
+
+Read the [walkthrough](models/dbt_v2_batch_tests_demo/README.md),
+[presenter guide](models/dbt_v2_batch_tests_demo/DEMO_GUIDE.md), and
+[run evidence](models/dbt_v2_batch_tests_demo/RUN_EVIDENCE.md).
+
 ## 🧩 Repository structure
 
 ```text
@@ -221,7 +249,13 @@ AnalyticsWithSushil/
 │   ├── dbt_v2_docs_demo/
 │   ├── dbt_v2_sql_lint_demo/
 │   ├── dbt_state_demo/
-│   └── dbt_compare_demo/
+│   ├── dbt_compare_demo/
+│   │   ├── README.md
+│   │   ├── DEMO_GUIDE.md
+│   │   └── RUN_EVIDENCE.md
+│   └── dbt_v2_batch_tests_demo/
+│       ├── dbt_v2_batch_orders.sql
+│       ├── schema.yml
 │       ├── README.md
 │       ├── DEMO_GUIDE.md
 │       └── RUN_EVIDENCE.md
@@ -233,12 +267,14 @@ AnalyticsWithSushil/
 │   ├── dbt_v2_column_lineage_demo/
 │   ├── dbt_v2_docs_demo/
 │   ├── dbt_v2_sql_lint_demo/
-│   └── dbt_state_demo/
+│   ├── dbt_state_demo/
+│   └── dbt_v2_batch_tests_demo/
 ├── .sqlfluff
 ├── dbt_project.yml
 ├── LICENSE.txt
 └── README.md
 ```
+
 
 ## 🛠️ Tech stack
 
@@ -325,6 +361,19 @@ dbt compare --select dbt_v2_static_analysis_daily_quality+ --defer --vars '{"dbt
 
 Then follow its [walkthrough](models/dbt_compare_demo/README.md) to review the
 validated development versus staging value differences.
+
+Run the dbt v2 Stable batch-testing demo:
+
+```bash
+dbt build --select +dbt_v2_batch_orders+ --batch-tests --no-manage-state
+dbt test --select dbt_v2_batch_orders --no-manage-state
+dbt test --select dbt_v2_batch_orders --no-manage-state --batch-tests
+```
+
+Ensure batching is not enabled by the environment for the baseline test command.
+Then follow its [walkthrough](models/dbt_v2_batch_tests_demo/README.md) to verify
+query counts, demonstrate per-column failures, and restore safe mode.
+
 
 ## 🤝 Contributing
 
