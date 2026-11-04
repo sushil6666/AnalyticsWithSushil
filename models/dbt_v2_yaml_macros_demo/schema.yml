@@ -1,0 +1,37 @@
+version: 2
+
+models:
+  - name: dbt_v2_yaml_payments
+    description: >
+      One row per synthetic payment, demonstrating project macros called directly
+      from schema YAML in dbt v2. The policy controls allowed statuses, while an
+      independent development-only mode changes one fixture row.
+    config:
+      meta:
+        demo_policy: "{{ var('dbt_v2_yaml_macros_demo_policy', 'standard') | lower }}"
+    columns:
+      - name: payment_id
+        description: Unique synthetic payment identifier; stable in every demo mode.
+        data_tests:
+          - not_null
+          - unique
+      - name: customer_id
+        description: Synthetic customer identifier; repeat customers are intentional.
+        data_tests:
+          - not_null
+      - name: payment_status
+        description: "Allowed payment statuses from the project macro: {{ dbt_v2_yaml_payment_statuses() | join(', ') }}."
+        data_tests:
+          - not_null
+          - accepted_values:
+              name: dbt_v2_yaml_payment_status_allowed
+              arguments:
+                values: "{{ dbt_v2_yaml_payment_statuses() }}"
+      - name: payment_amount
+        description: Original synthetic payment amount; not recognized revenue or refund accounting.
+        data_tests:
+          - not_null
+      - name: paid_at
+        description: Original synthetic payment event timestamp.
+        data_tests:
+          - not_null

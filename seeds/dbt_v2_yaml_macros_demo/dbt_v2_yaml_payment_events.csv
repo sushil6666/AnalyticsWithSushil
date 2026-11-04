@@ -1,0 +1,7 @@
+payment_id,customer_id,payment_status,payment_amount,paid_at
+P-2001,C-101,completed,25.00,2026-06-01 09:00:00
+P-2002,C-102,completed,40.00,2026-06-01 10:00:00
+P-2003,C-103,pending,15.00,2026-06-02 09:00:00
+P-2004,C-101,cancelled,60.00,2026-06-02 10:00:00
+P-2005,C-102,completed,35.00,2026-06-03 09:00:00
+P-2006,C-103,completed,80.00,2026-06-03 10:00:00

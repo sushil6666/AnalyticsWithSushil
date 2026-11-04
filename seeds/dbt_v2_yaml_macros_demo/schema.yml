@@ -1,0 +1,28 @@
+version: 2
+
+seeds:
+  - name: dbt_v2_yaml_payment_events
+    description: >
+      Six synthetic payments for the v2 project-macros-in-YAML demo.
+      One row per payment; this fixture is independent of the other demos.
+    config:
+      schema: dbt_v2_yaml_macros_demo_seed
+      quote_columns: false
+      column_types:
+        payment_id: varchar
+        customer_id: varchar
+        payment_status: varchar
+        payment_amount: number(12, 2)
+        paid_at: timestamp_ntz
+      tags: ['dbt_v2_yaml_macros_demo']
+    columns:
+      - name: payment_id
+        description: Unique synthetic payment identifier.
+      - name: customer_id
+        description: Synthetic customer identifier; repeat customers are intentional.
+      - name: payment_status
+        description: Original fixture status; completed, pending, or cancelled.
+      - name: payment_amount
+        description: Synthetic payment amount in demo currency units; not recognized revenue.
+      - name: paid_at
+        description: Synthetic payment event timestamp.
