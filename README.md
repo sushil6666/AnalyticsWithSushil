@@ -238,6 +238,26 @@ Read the [walkthrough](models/dbt_v2_batch_tests_demo/README.md),
 [presenter guide](models/dbt_v2_batch_tests_demo/DEMO_GUIDE.md), and
 [run evidence](models/dbt_v2_batch_tests_demo/RUN_EVIDENCE.md).
 
+### 9. dbt v2 Stable project macros in schema YAML
+
+This demo calls one project macro directly from `schema.yml` to drive both a
+column description and an `accepted_values` test. This YAML capability is
+supported in v2 and unavailable in v1's restricted project-macro context.
+
+```bash
+dbt build --select +dbt_v2_yaml_payments+ --no-manage-state
+```
+
+Expected clean result: **1 seed, 1 model, and 7 passing data tests.** A refund
+fails under the standard policy, passes under the extended policy, and an
+invalid status still fails. Both the documented status list and the test list
+come from the same macro. The walkthrough includes a safe reset.
+
+Read the [walkthrough](models/dbt_v2_yaml_macros_demo/README.md),
+[presenter guide](models/dbt_v2_yaml_macros_demo/DEMO_GUIDE.md), and
+[run evidence](models/dbt_v2_yaml_macros_demo/RUN_EVIDENCE.md).
+
+
 ## 🧩 Repository structure
 
 ```text
@@ -253,14 +273,22 @@ AnalyticsWithSushil/
 │   │   ├── README.md
 │   │   ├── DEMO_GUIDE.md
 │   │   └── RUN_EVIDENCE.md
-│   └── dbt_v2_batch_tests_demo/
-│       ├── dbt_v2_batch_orders.sql
+│   ├── dbt_v2_batch_tests_demo/
+│   │   ├── dbt_v2_batch_orders.sql
+│   │   ├── schema.yml
+│   │   ├── README.md
+│   │   ├── DEMO_GUIDE.md
+│   │   └── RUN_EVIDENCE.md
+│   └── dbt_v2_yaml_macros_demo/
+│       ├── dbt_v2_yaml_payments.sql
 │       ├── schema.yml
 │       ├── README.md
 │       ├── DEMO_GUIDE.md
 │       └── RUN_EVIDENCE.md
 ├── macros/
-│   └── on_error_continue_demo/
+│   ├── on_error_continue_demo/
+│   └── dbt_v2_yaml_macros_demo/
+│       └── payment_statuses.sql
 ├── seeds/
 │   ├── on_error_continue_demo/
 │   ├── dbt_v2_static_analysis_demo/
@@ -268,7 +296,8 @@ AnalyticsWithSushil/
 │   ├── dbt_v2_docs_demo/
 │   ├── dbt_v2_sql_lint_demo/
 │   ├── dbt_state_demo/
-│   └── dbt_v2_batch_tests_demo/
+│   ├── dbt_v2_batch_tests_demo/
+│   └── dbt_v2_yaml_macros_demo/
 ├── .sqlfluff
 ├── dbt_project.yml
 ├── LICENSE.txt
@@ -373,6 +402,17 @@ dbt test --select dbt_v2_batch_orders --no-manage-state --batch-tests
 Ensure batching is not enabled by the environment for the baseline test command.
 Then follow its [walkthrough](models/dbt_v2_batch_tests_demo/README.md) to verify
 query counts, demonstrate per-column failures, and restore safe mode.
+
+Run the dbt v2 Stable project-macros-in-YAML demo:
+
+```bash
+dbt build --select +dbt_v2_yaml_payments+ --no-manage-state
+```
+
+Then follow its [walkthrough](models/dbt_v2_yaml_macros_demo/README.md) to show a
+refund failing under the standard policy, passing under the extended policy,
+and an invalid status still failing. Reset to standard/safe mode afterward.
+
 
 
 ## 🤝 Contributing
